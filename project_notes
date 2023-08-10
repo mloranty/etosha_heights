@@ -1,0 +1,9 @@
+
+
+___________________________________________________________________________________________________________________________________
+08/10/2023
+  - planet mosaics clipped to EH boundary align. which is nice for analyhses of change detection 
+  - need to examine how to stack and assign doy for phenology curve fitting; perhaps scrape image date from support files
+  - also will probably need day of water year, rather than julian day
+  - phenofit and phoenor packages look like decent options
+  - should probably get more planet data before pursuing further
