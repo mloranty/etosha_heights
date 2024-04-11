@@ -13,7 +13,8 @@ library(terra)
 library(tidyverse)
 
 #set working directory
-setwd("G:/My Drive/Documents/research/giraffe")
+#setwd("G:/My Drive/Documents/research/giraffe")
+setwd("L:/projects/etosha_heights/")
 
 # define evi function for 8-band planet images
 # note the reflectance values are multiplied by 10000
@@ -24,7 +25,16 @@ evi <- function(x){
   2.5*((n-r)/(n+6*r-7.5*b+1))
 }
 
-# note water year begins on july 1 in southern hemisphere
+# define soil adjusted vi (savi) function for 8-band planet images
+# L = 0.5 after Huete et al 1988
+# note the reflectance values are multiplied by 10000
+savi <- function(x){
+  r <- x[[6]]/10000
+  n <- x[[8]]/10000
+  ((1.5*(n-r))/(n+r+0.5))
+}
+
+# note water year begins on July 1 in southern hemisphere
 # determine water year from timestamp
 wy <- function(x)
 {
@@ -43,7 +53,43 @@ wd <- function(x)
 # list all composite files for the temporal stack
 mos <- list.files(pattern = "composite.tif", recursive = T, full.names = T)
 
+#extract the directory name to use for output filenaming and to get the date
+ f <- sapply(strsplit(mos,"/"), FUN = "[", 3)
+
+# extract timestamp from directory name 
+ts <- strptime(as.numeric(substr(f,4,11)), 
+               format = "%Y%m%d", tz = "")
+
+
+# evi output filenames
+eo <- paste("eh_planet/evi/",f,"_evi.tif", sep = "")
+
+# evi output filenames
+so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
+
+
+# calculate evi and savi and write to file
+
+for(i in 1:length(mos))
+{
+  x <- rast(mos[i])
+  e <- evi(x)
+  s <- savi(x)
+  writeRaster(e,eo[i], overwrite = T)
+  writeRaster(s,so[i], overwrite = T)
+  rm(x,s,e)
+}
+
+
+
+
+
+wd(ts)
+wy(ts)
+
 t <- rast(mos[1])
+et <- evi(t)
+st <- savi(t)
 
 u <- rast(mos[2])
 compa
