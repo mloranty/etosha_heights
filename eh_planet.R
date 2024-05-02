@@ -11,6 +11,8 @@ rm(list = ls())
 #load required packages
 library(terra)
 library(tidyverse)
+library(patchwork)
+library(tidyterra)
 
 #set working directory
 #setwd("G:/My Drive/Documents/research/giraffe")
@@ -92,18 +94,26 @@ vg <-read.csv("eh_veg_data/DB_EtoshaHeights_VegTransects.csv",
 # convert to spatial vector
 veg <- vect(vg, geom = c("lon_dd", "lat_dd"), crs = "epsg:4326")
 
+# buffer to 10m diameter based on Marufu thesis
+veg.p <- buffer(veg, 5)
+veg.p <- project(veg.p, ref)
+writeVector(veg.p, filename = "eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
+
 #veg.utm <- project(veg, ref)
 # read in the stacks of evi and savi data
 eh.evi <- rast(list.files(path = "eh_planet/evi/", full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", full.names = T))
 
 # extract evi and savi values for each plot
-plt.evi <- terra::extract(eh.evi,veg)
-plt.savi <- terra::extract(eh.savi,veg)
+# plt.evi <- terra::extract(eh.evi[[1]],veg.p, weights = T)
+# plt.savi <- terra::extract(eh.savi,veg.p)
+plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
+plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 
 # set column headers based on file names
-colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11))
-colnames(plt.savi) <- c("ID", substr(list.files(path = "eh_planet/savi/"),1,11))
+#colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
+colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/"),1,11))
+colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/"),1,11))
 
 # add variables for analysis/plotting
 plt.evi <- cbind(plt.evi, veg[,1:6])
@@ -123,24 +133,64 @@ rm(pel,psl,plt.evi,plt.savi)
 
 # add time stamp here
 plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
-                            format = "%Y%m%d", usetz = FALSE)
+                            format = "%Y%m%d")
 
+# create a factor for veg community
+plt.vi$VegComm <- as.factor(plt.vi$Association)
 
 # group by veg class
 vcl <- plt.vi %>%
-  group_by(Association,timestamp) %>%
+  group_by(VegComm,timestamp) %>%
   summarise(evi = mean(evi, na.rm = T),
             svi = mean(savi, na.rm = T),
             elev_m = mean(elev_m, na.rm = T))
 
-vcl$ts <- as.POSIXct(vcl$timestamp)
+#vcl$ts <- as.POSIXct(vcl$timestamp)
 
-e <- ggplot() +
-  geom_point(data = vcl, aes(x = ts, y = evi, color = Association, group = Association))
+# plot evi timeseries
+e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  scale_fill_discrete()
 
-s <- ggplot() +
-  geom_point(data = vcl, aes(x = ts, y = svi, color = Association, group = Association))
+# plot savi time series
+s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  scale_fill_discrete()
 
+# make boxplots of mean January vi for 2023 & 2024
+sj23 <- plt.vi %>%
+        filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
+        ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
+              geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+               ylim(c(0.1,0.35))
+
+ej23 <- plt.vi %>%
+        filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
+        ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
+        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+        ylim(c(0.1,0.35))
+
+sj24 <- plt.vi %>%
+        filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+        ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
+        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+        ylim(c(0.1,0.35))
+
+ej24 <- plt.vi %>%
+        filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+        ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
+        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+        ylim(c(0.1,0.35))
+
+# make plots of vi maps through time
+ggplot() +
+  geom_spatraster(data = eh.savi) +
+  facet_wrap(~lyr, ncol = 2) +
+  scale_fill_hypso_b()
+# not ready to delete just yet #
+######################################################################
 wd(ts)
 wy(ts)
 
