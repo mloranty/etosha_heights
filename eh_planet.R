@@ -52,6 +52,9 @@ wd <- function(x)
          ifelse(month(x)<7,yday(x)+184,yday(x)-181))
 }
 
+
+# See Collapsed code for planet vi calcs, otherwise skip this section 
+#------------------------------------------------------------------------------
 # list all composite files for the temporal stack
 mos <- list.files(pattern = "composite.tif", recursive = T, full.names = T)
 
@@ -99,10 +102,15 @@ veg.p <- buffer(veg, 5)
 veg.p <- project(veg.p, ref)
 writeVector(veg.p, filename = "eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 
-#veg.utm <- project(veg, ref)
-# read in the stacks of evi and savi data
-eh.evi <- rast(list.files(path = "eh_planet/evi/", full.names = T))
-eh.savi <- rast(list.files(path = "eh_planet/savi/", full.names = T))
+#-------------------------------------------------------------------------------------------
+
+# read in the stacks of evi and savi data along with sample plot polygons
+veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
+eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
+eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
+
+# not sure why this didn't carry through from the processing step...
+veg.p <- project(veg.p, eh.evi)
 
 # extract evi and savi values for each plot
 # plt.evi <- terra::extract(eh.evi[[1]],veg.p, weights = T)
@@ -112,12 +120,15 @@ plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 
 # set column headers based on file names
 #colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
-colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/"),1,11))
-colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/"),1,11))
+colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+
+names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
 
 # add variables for analysis/plotting
-plt.evi <- cbind(plt.evi, veg[,1:6])
-plt.savi <- cbind(plt.savi, veg[,1:6])
+plt.evi <- cbind(plt.evi, veg.p[,1:6])
+plt.savi <- cbind(plt.savi, veg.p[,1:6])
 
 # pivot longer 
 pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
@@ -136,7 +147,7 @@ plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)),
                             format = "%Y%m%d")
 
 # create a factor for veg community
-plt.vi$VegComm <- as.factor(plt.vi$Association)
+plt.vi$VegComm <- as.factor(plt.vi$Associati0)
 
 # group by veg class
 vcl <- plt.vi %>%
@@ -145,7 +156,8 @@ vcl <- plt.vi %>%
             svi = mean(savi, na.rm = T),
             elev_m = mean(elev_m, na.rm = T))
 
-#vcl$ts <- as.POSIXct(vcl$timestamp)
+# can only plot with POSIXct class
+vcl$ts <- as.POSIXct(vcl$timestamp)
 
 # plot evi timeseries
 e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
@@ -186,9 +198,9 @@ ej24 <- plt.vi %>%
 
 # make plots of vi maps through time
 ggplot() +
-  geom_spatraster(data = eh.savi) +
-  facet_wrap(~lyr, ncol = 2) +
-  scale_fill_hypso_b()
+  geom_spatraster(data = eh.savi[[1:4]]) +
+  facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.1,0.5))
 # not ready to delete just yet #
 ######################################################################
 wd(ts)
