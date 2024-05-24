@@ -198,9 +198,9 @@ ej24 <- plt.vi %>%
 
 # make plots of vi maps through time
 ggplot() +
-  geom_spatraster(data = eh.savi[[1:4]]) +
+  geom_spatraster(data = eh.savi) +
   facet_wrap(~lyr, ncol = 4) +
-  scale_fill_viridis_c(limits = c(0.1,0.5))
+  scale_fill_viridis_c(limits = c(0.1,0.45))
 # not ready to delete just yet #
 ######################################################################
 wd(ts)
