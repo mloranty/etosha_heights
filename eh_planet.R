@@ -13,7 +13,8 @@ library(terra)
 library(tidyverse)
 library(patchwork)
 library(tidyterra)
-
+library(caret)
+library(randomForest)
 #set working directory
 #setwd("G:/My Drive/Documents/research/giraffe")
 setwd("L:/projects/etosha_heights/")
@@ -109,6 +110,10 @@ veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
 
+# set layer names 
+names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+
 # not sure why this didn't carry through from the processing step...
 veg.p <- project(veg.p, eh.evi)
 
@@ -120,11 +125,10 @@ plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 
 # set column headers based on file names
 #colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
-colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
-colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+# colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+# colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
 
-names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
-names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+
 
 # add variables for analysis/plotting
 plt.evi <- cbind(plt.evi, veg.p[,1:6])
@@ -140,7 +144,7 @@ psl <- rename(psl, savi = value)
 
 # join these dataframes
 plt.vi <- full_join(pel, psl)
-rm(pel,psl,plt.evi,plt.savi)
+#rm(pel,psl,plt.evi,plt.savi)
 
 # add time stamp here
 plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
@@ -201,6 +205,78 @@ ggplot() +
   geom_spatraster(data = eh.savi) +
   facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.1,0.45))
+
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+#------------------------------------------------------------------------------------#
+# RANDOM FOREST CLASSIFICATION 
+# create data frame for validation/training
+savi <- plt.savi[,1:26]
+
+# add veg association as a factor
+savi$lc <- as.numeric(as.factor(veg.p$Associati0))
+
+# remove na
+savi <- na.omit(savi)
+# IS ths necessary, or just to help keep track of things? 
+landClass <- data.frame(lcID = 1:3,
+                        landCover = c ("ground", "tall", "water"))
+
+# specify training and validation data sets
+set.seed(11213)
+
+# randomly select half of the records
+sampleSamp <- sample(seq(1,166),166/2)
+
+savi$sampleType <- "train"
+
+savi$sampleType[sampleSamp] <- "valid"
+
+
+# create training and validation subsets
+trainD <- savi[savi$sampleType=="train",]
+validD<- savi[savi$sampleType=="valid",]
+
+
+#------------Random Forest Classification of RGB data------------#
+# run the Random Forest model
+tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the training data
+                   number = 10, # number 10 fold
+                   repeats = 10) # number of repeats
+###random forests
+#Typically square root of number of variables
+rf.grid <- expand.grid(mtry=1:2) # number of variables available for splitting at each tree node
+
+rf_model <- caret::train(x = trainD[,c(1:5)], #digital number data
+                         y = as.factor(trainD$lc), #land class we want to predict
+                         method = "rf", #use random forest
+                         metric="Accuracy", #assess by accuracy
+                         trControl = tc, #use parameter tuning method
+                         tuneGrid = rf.grid) #parameter tuning grid
+#check output
+rf_model
+
+# evaluate validation data
+confusionMatrix(predict(rf_model,validD[,1:5]),as.factor(validD$lc))
+
+# apply RF model to rgb data
+rf_prediction <- predict(eh.savi[[1:5]], model=rf_model)
+,
+                                 filename = "data/processed/CYN_tr1_rgb_rf_lc.tif",
+                                 overwrite = T, progress = T)
+
+#plot the data
+plot(rf_prediction)
+
+
+
+
+
+
+
+
+
+
 # not ready to delete just yet #
 ######################################################################
 wd(ts)
