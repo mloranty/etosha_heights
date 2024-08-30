@@ -210,23 +210,28 @@ ggplot() +
 #------------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------------#
 # RANDOM FOREST CLASSIFICATION 
+
+# select which layers to use - just for workflow development purposes at this point
+lyr <- 19:24
+
 # create data frame for validation/training
-savi <- plt.savi[,1:26]
+savi <- plt.savi[,lyr]
 
 # add veg association as a factor
 savi$lc <- as.numeric(as.factor(veg.p$Associati0))
 
 # remove na
 savi <- na.omit(savi)
+
 # IS ths necessary, or just to help keep track of things? 
-landClass <- data.frame(lcID = 1:3,
-                        landCover = c ("ground", "tall", "water"))
+#landClass <- data.frame(lcID = 1:3,
+#                      landCover = c ("ground", "tall", "water"))
 
 # specify training and validation data sets
 set.seed(11213)
 
 # randomly select half of the records
-sampleSamp <- sample(seq(1,166),166/2)
+sampleSamp <- sample(seq(1,172),172/2)
 
 savi$sampleType <- "train"
 
@@ -247,7 +252,7 @@ tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the tra
 #Typically square root of number of variables
 rf.grid <- expand.grid(mtry=1:2) # number of variables available for splitting at each tree node
 
-rf_model <- caret::train(x = trainD[,c(1:5)], #digital number data
+rf_model <- caret::train(x = trainD[,c(1:6)], #digital number data
                          y = as.factor(trainD$lc), #land class we want to predict
                          method = "rf", #use random forest
                          metric="Accuracy", #assess by accuracy
@@ -257,12 +262,12 @@ rf_model <- caret::train(x = trainD[,c(1:5)], #digital number data
 rf_model
 
 # evaluate validation data
-confusionMatrix(predict(rf_model,validD[,1:5]),as.factor(validD$lc))
+confusionMatrix(predict(rf_model,validD[,1:6]),as.factor(validD$lc))
 
 # apply RF model to rgb data
-rf_prediction <- predict(eh.savi[[1:5]], model=rf_model)
-,
-                                 filename = "data/processed/CYN_tr1_rgb_rf_lc.tif",
+sv <- eh.savi[[lyr]]
+rf_prediction <- predict(sv, rf_model, na.rm = T,
+                                 filename = "eh_rf_lc_test.tif",
                                  overwrite = T, progress = T)
 
 #plot the data
