@@ -50,13 +50,37 @@ met$year <- year(met$tmstmp)
 met$yday <- yday(met$tmstmp)
 
 # add site name
-c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge")
+site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge"),
+                   logger = c("22569", "22572", "22575", "22576", "22583", "22584"))
 
 # make data frames for key met vars to start
 prcp <- met %>%
         select(Timestamp, tmstmp, year, jday, logger, mm.Precipitation) %>%
         distinct()
 
+ta <- met %>%
+  select(Timestamp, tmstmp, year, jday, logger, X.C.Air.Temperature) %>%
+  distinct()
+
+# aggregate to daily data
 prcp.day <- prcp %>%
   group_by(logger,year,jday) %>%
   summarise(precip.mm = sum(mm.Precipitation, na.rm = T))
+
+ta.day <- ta %>%
+  group_by(logger,year,jday) %>%
+  summarise(airTemp = mean(X.C.Air.Temperature, na.rm = T))
+
+# add timestamp
+prcp.day$tmstmp <- strptime(paste(prcp.day$year,prcp.day$jday,sep=""),
+                            format = "%Y%j")
+
+ta.day$tmstmp <- strptime(paste(ta.day$year,ta.day$jday,sep=""),
+                            format = "%Y%j")
+
+# add site as a variable, for convenience
+prcp.day <- full_join(prcp.day, site)
+ta.day <- full_join(ta.day, site)
+
+
+# make a plot of temp and precip
