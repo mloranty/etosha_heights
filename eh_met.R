@@ -18,6 +18,24 @@ ifelse(Sys.info()['sysname'] == "Darwin",
 
 #setwd("L:/projects/etosha_heights/")
 
+# DEFINE FUNCTIONS TO CALCULATE WATER DAY/YEAR
+# note water year begins on July 1 in southern hemisphere
+# determine water year from timestamp
+wy <- function(x)
+{
+  #ifelse(is.POSIXct(x),,"Input is not Date/Time class")
+  ifelse(month(x)<7,year(x),year(x)+1)
+}
+
+# calculate water day from timestamp
+wd <- function(x)
+{
+  ifelse(leap_year(x),
+         ifelse(month(x)<7,yday(x)+184,yday(x)-182),
+         ifelse(month(x)<7,yday(x)+184,yday(x)-181))
+}
+
+# READ DATA
 # list data files
 df <- list.files(path = "eh_met_data/raw_data/csv", pattern = ".csv", full.names = T)
 
@@ -71,16 +89,33 @@ ta.day <- ta %>%
   group_by(logger,year,jday) %>%
   summarise(airTemp = mean(X.C.Air.Temperature, na.rm = T))
 
-# add timestamp
-prcp.day$tmstmp <- strptime(paste(prcp.day$year,prcp.day$jday,sep=""),
-                            format = "%Y%j")
+# add timestamp. water year & water day
+prcp.day$tmstmp <- as.POSIXct(strptime(paste(prcp.day$year,prcp.day$jday,sep=""),
+                            format = "%Y%j"))
+prcp.day$wy <- wy(prcp.day$tmstmp)
+prcp.day$wday <- wd(prcp.day$tmstmp)
 
-ta.day$tmstmp <- strptime(paste(ta.day$year,ta.day$jday,sep=""),
-                            format = "%Y%j")
+
+prcp.day <- prcp.day %>% group_by(site, wy) %>% arrange(tmstmp) %>% mutate(precip.cum = cumsum(precip.mm))
+  
+ta.day$tmstmp <- as.POSIXct(strptime(paste(ta.day$year,ta.day$jday,sep=""),
+                            format = "%Y%j"))
 
 # add site as a variable, for convenience
 prcp.day <- full_join(prcp.day, site)
 ta.day <- full_join(ta.day, site)
 
 
-# make a plot of temp and precip
+# make plots of temp and precip
+
+ggplot(data = prcp.day,
+       aes(x = tmstmp, y = precip.mm, group = site, fill = site)) +
+geom_bar(stat = "identity", position = "dodge")
+
+ggplot(data = ta.day,
+       aes(x = tmstmp, y = airTemp, group = site, color = site)) +
+geom_line()
+
+ggplot(data = prcp.day,
+       aes(x = tmstmp, y = precip.cum, group = site, color = site)) +
+  geom_line()
