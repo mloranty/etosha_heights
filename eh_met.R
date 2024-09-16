@@ -65,11 +65,12 @@ met$tmstmp <- strptime(met$Timestamp, format = "%m/%d/%y %H:%M")
 
 # create date vars
 met$year <- year(met$tmstmp)
-met$yday <- yday(met$tmstmp)
+met$jday <- yday(met$tmstmp)
 
 # add site name
 site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge"),
                    logger = c("22569", "22572", "22575", "22576", "22583", "22584"))
+
 
 # make data frames for key met vars to start
 prcp <- met %>%
@@ -89,6 +90,10 @@ ta.day <- ta %>%
   group_by(logger,year,jday) %>%
   summarise(airTemp = mean(X.C.Air.Temperature, na.rm = T))
 
+# add site as a variable, for convenience
+prcp.day <- full_join(prcp.day, site)
+ta.day <- full_join(ta.day, site)
+
 # add timestamp. water year & water day
 prcp.day$tmstmp <- as.POSIXct(strptime(paste(prcp.day$year,prcp.day$jday,sep=""),
                             format = "%Y%j"))
@@ -101,9 +106,7 @@ prcp.day <- prcp.day %>% group_by(site, wy) %>% arrange(tmstmp) %>% mutate(preci
 ta.day$tmstmp <- as.POSIXct(strptime(paste(ta.day$year,ta.day$jday,sep=""),
                             format = "%Y%j"))
 
-# add site as a variable, for convenience
-prcp.day <- full_join(prcp.day, site)
-ta.day <- full_join(ta.day, site)
+
 
 
 # make plots of temp and precip
@@ -119,3 +122,6 @@ geom_line()
 ggplot(data = prcp.day,
        aes(x = tmstmp, y = precip.cum, group = site, color = site)) +
   geom_line()
+
+# ordered data frame to identify at high precip days
+pd2 <- prcp.day %>% arrange(desc(precip.mm))

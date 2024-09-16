@@ -1,9 +1,41 @@
+Metadata for Etosha Heights Planet data acquisition and processing
 
+------------------------------------------------------------------------
+16 Sept 2024
+- found in May that harmonzing data to Sentinel bands includes different/inconsisten atmospheric processing for each tile, resulting in artefacts/differences at tile boundaries in the composite image
+- downloaded non-harmonized imagery to see if this eliminates the issue. Dates of non-harmonized(nh) include: 11/28/2023, 12/29/2023, 01/18/2024, 02/16/2024, 03/02/2024
+- need to download additional dates for full phenological cycle, and also to examine pre/post rain pulse differences
+- rain pulses on 4/5/24 and 11/25/23 as well as the 2-weeks around Christmas/New Year
+- so maybe download mid Nov, mid March and late April
+------------------------------------------------------------------------
+28 March 2024
+- Downloaded additional data from the following dates: 06/11/2023, 07/03/2023, 07/19/2023, 08/18/2023, 09/30/2023, 11/02/2023, 11/28/2023, 12/11/2023, 12/26/2023, 01/02/2024, 01/12/2024, 02/10/2024, 02/16/2024, 03/02/2024, 03/19/2024, 05/22/2023, 03/14/2023, 02/12/2023* (*file might be named 2022 instead), 
+- data were composited and clipped to ROI
+- date were harmonized to sentinel 2 bands
+- 8-band option selected (band information provided in the table below)
+-------------------------------------------------------------------------
+26 March 2024
+Downloaded additional data from the following dates: 11/26/2022, 01/09/2023, 01/25/2023, 01/29/2023, 03/04/2023, 04/23/2023
+- data were composited and clipped to ROI
+- date were harmonized to sentinel 2 bands
+- 8-band option selected (band information provided in the table below)
 
-___________________________________________________________________________________________________________________________________
+-------------------------------------------------------------------------
 08/10/2023
-  - planet mosaics clipped to EH boundary align. which is nice for analyhses of change detection 
-  - need to examine how to stack and assign doy for phenology curve fitting; perhaps scrape image date from support files
-  - also will probably need day of water year, rather than julian day
-  - phenofit and phoenor packages look like decent options
-  - should probably get more planet data before pursuing further
+- planet mosaics clipped to EH boundary align. which is nice for analyhses of change detection 
+- need to examine how to stack and assign doy for phenology curve fitting; perhaps scrape image date from support files
+- also will probably need day of water year, rather than julian day
+- phenofit and phoenor packages look like decent options
+- should probably get more planet data before pursuing further
+- Data downloaded for the following dates:12/21/2022, 02/12/2023, 03/14/2023, & 05/22/2023 downloads were composited and clipped to the ROI
+
+-------------------------------------------------------------------------
+  The 8-band multispectral band order is:
+●	Band 1 = Coastal Blue
+●	Band 2 = Blue
+●	Band 3 = Green I
+●	Band 4 = Green
+●	Band 5 = Yellow
+●	Band 6 = Red
+●	Band 7 = Red Edge
+●	Band 8 = Near-infrared
