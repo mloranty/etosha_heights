@@ -108,6 +108,7 @@ for(i in 1:length(mos))
 
 # remove hidden temporary files
 tmpFiles(remove = T)
+
 # read eh veg data for validation
 vg <-read.csv("eh_veg_data/DB_EtoshaHeights_VegTransects.csv", 
               header = T)
