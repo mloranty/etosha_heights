@@ -37,6 +37,14 @@ savi <- function(x){
   ((1.5*(n-r))/(n+r+0.5))
 }
 
+# define near infrared reflectance of vegetation for 8-band planet images
+#  Badgley et al 2017
+# note the reflectance values are multiplied by 10000
+nirv <- function(x){
+  r <- x[[6]]/10000
+  n <- x[[8]]/10000
+  (((n-r)/(n+r))*r)
+}
 # note water year begins on July 1 in southern hemisphere
 # determine water year from timestamp
 wy <- function(x)
@@ -57,10 +65,13 @@ wd <- function(x)
 # See Collapsed code for planet vi calcs, otherwise skip this section 
 #------------------------------------------------------------------------------
 # list all composite files for the temporal stack
-mos <- list.files(pattern = "composite.tif", recursive = T, full.names = T)
+mos <- list.files(path = "eh_planet", 
+                  pattern = glob2rx("*composite.tif"), 
+                  recursive = T, 
+                  full.names = T)
 
 #extract the directory name to use for output filenaming and to get the date
- f <- sapply(strsplit(mos,"/"), FUN = "[", 3)
+f <- sapply(strsplit(mos,"/"), FUN = "[", 2)
 
 # extract timestamp from directory name 
 ts <- strptime(as.numeric(substr(f,4,11)), 
@@ -70,8 +81,11 @@ ts <- strptime(as.numeric(substr(f,4,11)),
 # evi output filenames
 eo <- paste("eh_planet/evi/",f,"_evi.tif", sep = "")
 
-# evi output filenames
+# savi output filenames
 so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
+
+# nirv output filenames
+no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
 
 #reference raster to align everything to the same extent
 ref <- rast(mos[1])
@@ -83,14 +97,17 @@ for(i in 1:length(mos))
   x <- rast(mos[i])
   e <- evi(x)
   s <- savi(x)
+  n <- nirv(x)
   e <- resample(e,ref, filename = eo[i], overwrite = T)
   s <- resample(s,ref, filename = so[i], overwrite = T)
+  n <- resample(n,ref, filename = no[i], overwrite = T)
  # writeRaster(e,eo[i], overwrite = T)
  # writeRaster(s,so[i], overwrite = T)
-  rm(x,s,e)
+  rm(x,s,e,n)
 }
 
-
+# remove hidden temporary files
+tmpFiles(remove = T)
 # read eh veg data for validation
 vg <-read.csv("eh_veg_data/DB_EtoshaHeights_VegTransects.csv", 
               header = T)
