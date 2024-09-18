@@ -87,6 +87,9 @@ so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
 # nirv output filenames
 no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
 
+# check to see which files exist to avoid unnecessary reprocessing
+match(list.files(path = "eh_planet/nirv/", full.names = T),no) ==T
+
 #reference raster to align everything to the same extent
 ref <- rast(mos[1])
 
