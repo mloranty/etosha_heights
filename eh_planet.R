@@ -88,22 +88,22 @@ so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
 no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
 
 # check to see which files exist to avoid unnecessary reprocessing
-match(list.files(path = "eh_planet/nirv/", full.names = T),no) ==T
+p <- which(no %in% list.files(path = "eh_planet/nirv/", full.names = T)==F)
 
 #reference raster to align everything to the same extent
 ref <- rast(mos[1])
 
 # calculate evi and savi and write to file
 # note we ran into some memory issues here
-for(i in 1:length(mos))
+for(i in 1:length(p))
 {
-  x <- rast(mos[i])
+  x <- rast(mos[p[i]])
   e <- evi(x)
   s <- savi(x)
   n <- nirv(x)
-  e <- resample(e,ref, filename = eo[i], overwrite = T)
-  s <- resample(s,ref, filename = so[i], overwrite = T)
-  n <- resample(n,ref, filename = no[i], overwrite = T)
+  e <- resample(e,ref, filename = eo[p[i]], overwrite = T)
+  s <- resample(s,ref, filename = so[p[i]], overwrite = T)
+  n <- resample(n,ref, filename = no[p[i]], overwrite = T)
  # writeRaster(e,eo[i], overwrite = T)
  # writeRaster(s,so[i], overwrite = T)
   rm(x,s,e,n)
@@ -131,9 +131,11 @@ veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
 
+eh.nirv <- rast(list.files(path = "eh_planet/nirv/", pattern = glob2rx("*.tif"), full.names = T))
 # set layer names 
 names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
 names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.nirv) <- c(substr(list.files(path = "eh_planet/nirv/",pattern = glob2rx("*.tif")),1,11))
 
 # not sure why this didn't carry through from the processing step...
 veg.p <- project(veg.p, eh.evi)
@@ -143,7 +145,7 @@ veg.p <- project(veg.p, eh.evi)
 # plt.savi <- terra::extract(eh.savi,veg.p)
 plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
 plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
-
+plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
 # set column headers based on file names
 #colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
 # colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
@@ -154,15 +156,16 @@ plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 # add variables for analysis/plotting
 plt.evi <- cbind(plt.evi, veg.p[,1:6])
 plt.savi <- cbind(plt.savi, veg.p[,1:6])
-
+plt.nirv <- cbind(plt.nirv, veg.p[,1:6])
 # pivot longer 
 pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
 psl <- pivot_longer(plt.savi, cols = starts_with("EH"))
+pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
 
 # change varibale names
 pel <- rename(pel, evi = value)
 psl <- rename(psl, savi = value)
-
+pnl <- rename(psl, nirv = value)
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 #rm(pel,psl,plt.evi,plt.savi)
