@@ -165,9 +165,10 @@ pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
 # change varibale names
 pel <- rename(pel, evi = value)
 psl <- rename(psl, savi = value)
-pnl <- rename(psl, nirv = value)
+pnl <- rename(pnl, nirv = value)
 # join these dataframes
 plt.vi <- full_join(pel, psl)
+plt.vi <- full_join(plt.vi, pnl)
 #rm(pel,psl,plt.evi,plt.savi)
 
 # add time stamp here
@@ -182,6 +183,7 @@ vcl <- plt.vi %>%
   group_by(VegComm,timestamp) %>%
   summarise(evi = mean(evi, na.rm = T),
             svi = mean(savi, na.rm = T),
+            nrv = mean(nirv, na.rm = T),
             elev_m = mean(elev_m, na.rm = T))
 
 # can only plot with POSIXct class
@@ -198,6 +200,12 @@ s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) 
   geom_point() + 
   geom_line() +
   scale_fill_discrete()
+
+n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  scale_fill_discrete()
+
 
 # make boxplots of mean January vi for 2023 & 2024
 sj23 <- plt.vi %>%
@@ -224,6 +232,17 @@ ej24 <- plt.vi %>%
         geom_boxplot(notch = TRUE, outlier.shape = NA) + 
         ylim(c(0.1,0.35))
 
+ej24 <- plt.vi %>%
+  filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+  ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.1,0.35))
+
+nj24 <- plt.vi %>%
+  filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+  ggplot(aes(x = VegComm, y = nirv, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.03,0.07))
 # make plots of vi maps through time
 ggplot() +
   geom_spatraster(data = eh.savi) +
