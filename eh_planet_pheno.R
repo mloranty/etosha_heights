@@ -3,6 +3,7 @@
 # analyze phenology for Etosha Heights 
 # using Planet Imagery
 #
+# see eh_planet
 # MML 08/10/2023
 ######################################
 
@@ -16,115 +17,11 @@ library(tidyterra)
 library(caret)
 library(randomForest)
 #set working directory
-#setwd("G:/My Drive/Documents/research/giraffe")
-setwd("L:/projects/etosha_heights/")
 
-# define evi function for 8-band planet images
-# note the reflectance values are multiplied by 10000
-evi <- function(x){
-  b <- x[[2]]/10000
-  r <- x[[6]]/10000
-  n <- x[[8]]/10000
-  2.5*((n-r)/(n+6*r-7.5*b+1))
-}
-
-# define soil adjusted vi (savi) function for 8-band planet images
-# L = 0.5 after Huete et al 1988
-# note the reflectance values are multiplied by 10000
-savi <- function(x){
-  r <- x[[6]]/10000
-  n <- x[[8]]/10000
-  ((1.5*(n-r))/(n+r+0.5))
-}
-
-# define near infrared reflectance of vegetation for 8-band planet images
-#  Badgley et al 2017
-# note the reflectance values are multiplied by 10000
-nirv <- function(x){
-  r <- x[[6]]/10000
-  n <- x[[8]]/10000
-  (((n-r)/(n+r))*r)
-}
-# note water year begins on July 1 in southern hemisphere
-# determine water year from timestamp
-wy <- function(x)
-{
-  #ifelse(is.POSIXct(x),,"Input is not Date/Time class")
-  ifelse(month(x)<7,year(x),year(x)+1)
-}
-
-# calculate water day from timestamp
-wd <- function(x)
-{
-  ifelse(leap_year(x),
-         ifelse(month(x)<7,yday(x)+184,yday(x)-182),
-         ifelse(month(x)<7,yday(x)+184,yday(x)-181))
-}
-
-
-# See Collapsed code for planet vi calcs, otherwise skip this section 
-#------------------------------------------------------------------------------
-# list all composite files for the temporal stack
-mos <- list.files(path = "eh_planet", 
-                  pattern = glob2rx("*composite.tif"), 
-                  recursive = T, 
-                  full.names = T)
-
-#extract the directory name to use for output filenaming and to get the date
-f <- sapply(strsplit(mos,"/"), FUN = "[", 2)
-
-# extract timestamp from directory name 
-ts <- strptime(as.numeric(substr(f,4,11)), 
-               format = "%Y%m%d", tz = "")
-
-
-# evi output filenames
-eo <- paste("eh_planet/evi/",f,"_evi.tif", sep = "")
-
-# savi output filenames
-so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
-
-# nirv output filenames
-no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
-
-# check to see which files exist to avoid unnecessary reprocessing
-p <- which(no %in% list.files(path = "eh_planet/nirv/", full.names = T)==F)
-
-#reference raster to align everything to the same extent
-ref <- rast(mos[1])
-
-# calculate evi and savi and write to file
-# note we ran into some memory issues here
-for(i in 1:length(p))
-{
-  x <- rast(mos[p[i]])
-  e <- evi(x)
-  s <- savi(x)
-  n <- nirv(x)
-  e <- resample(e,ref, filename = eo[p[i]], overwrite = T)
-  s <- resample(s,ref, filename = so[p[i]], overwrite = T)
-  n <- resample(n,ref, filename = no[p[i]], overwrite = T)
- # writeRaster(e,eo[i], overwrite = T)
- # writeRaster(s,so[i], overwrite = T)
-  rm(x,s,e,n)
-}
-
-# remove hidden temporary files
-tmpFiles(remove = T)
-
-# read eh veg data for validation
-vg <-read.csv("eh_veg_data/DB_EtoshaHeights_VegTransects.csv", 
-              header = T)
-
-# convert to spatial vector
-veg <- vect(vg, geom = c("lon_dd", "lat_dd"), crs = "epsg:4326")
-
-# buffer to 10m diameter based on Marufu thesis
-veg.p <- buffer(veg, 5)
-veg.p <- project(veg.p, ref)
-writeVector(veg.p, filename = "eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
-
-#-------------------------------------------------------------------------------------------
+#set working directory depending on which computer being used
+ifelse(Sys.info()['sysname'] == "Darwin",
+       setwd("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe"),
+       setwd("G:/My Drive/Documents/research/giraffe"))
 
 # read in the stacks of evi and savi data along with sample plot polygons
 veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
@@ -173,7 +70,7 @@ plt.vi <- full_join(plt.vi, pnl)
 
 # add time stamp here
 plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
-                            format = "%Y%m%d")
+                             format = "%Y%m%d")
 
 # create a factor for veg community
 plt.vi$VegComm <- as.factor(plt.vi$Associati0)
@@ -209,28 +106,28 @@ n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) 
 
 # make boxplots of mean January vi for 2023 & 2024
 sj23 <- plt.vi %>%
-        filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
-        ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
-              geom_boxplot(notch = TRUE, outlier.shape = NA) + 
-               ylim(c(0.1,0.35))
+  filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
+  ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.1,0.35))
 
 ej23 <- plt.vi %>%
-        filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
-        ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
-        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
-        ylim(c(0.1,0.35))
+  filter(month(timestamp) == 1 & year(timestamp) == 2023) %>% 
+  ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.1,0.35))
 
 sj24 <- plt.vi %>%
-        filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
-        ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
-        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
-        ylim(c(0.1,0.35))
+  filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+  ggplot(aes(x = VegComm, y = savi, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.1,0.35))
 
 ej24 <- plt.vi %>%
-        filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
-        ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
-        geom_boxplot(notch = TRUE, outlier.shape = NA) + 
-        ylim(c(0.1,0.35))
+  filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
+  ggplot(aes(x = VegComm, y = evi, color = VegComm)) +
+  geom_boxplot(notch = TRUE, outlier.shape = NA) + 
+  ylim(c(0.1,0.35))
 
 ej24 <- plt.vi %>%
   filter(month(timestamp) == 1 & year(timestamp) == 2024) %>% 
@@ -310,8 +207,8 @@ confusionMatrix(predict(rf_model,validD[,1:6]),as.factor(validD$lc))
 # apply RF model to rgb data
 sv <- eh.savi[[lyr]]
 rf_prediction <- predict(sv, rf_model, na.rm = T,
-                                 filename = "eh_rf_lc_test.tif",
-                                 overwrite = T, progress = T)
+                         filename = "eh_rf_lc_test.tif",
+                         overwrite = T, progress = T)
 
 #plot the data
 plot(rf_prediction)
