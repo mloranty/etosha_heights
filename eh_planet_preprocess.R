@@ -124,6 +124,16 @@ veg.p <- buffer(veg, 5)
 veg.p <- project(veg.p, ref)
 writeVector(veg.p, filename = "eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 
+# calculate pre/post pulse vi change
+subset(eh.evi, "EH-20240410") - subset(eh.evi, "EH-20240315") %>%
+  writeRaster("eh_planet/evi/delta_evi_20240410_20240315.tif")
+
+subset(eh.savi, "EH-20240410") - subset(eh.savi, "EH-20240315") %>%
+  writeRaster("eh_planet/savi/delta_savi_20240410_20240315.tif")
+
+subset(eh.nirv, "EH-20240410") - subset(eh.nirv, "EH-20240315") %>%
+  writeRaster("eh_planet/nirv/delta_nirv_20240410_20240315.tif")
+
 # copy vi files to Google Drive for analysis
 system("cp -r eh_planet/evi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
 system("cp -r eh_planet/savi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
