@@ -68,7 +68,7 @@ pnl <- rename(pnl, nirv = value)
 # write these files to csv
 write.csv(pel, file = "eh_planet/eh_plot_evi.csv", row.names = F)
 write.csv(psl, file = "eh_planet/eh_plot_savi.csv", row.names = F)
-write.csv(psl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
+write.csv(pnl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
 
 
 # read them in for analyses on the go
