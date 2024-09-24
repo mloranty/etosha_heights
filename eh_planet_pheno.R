@@ -60,10 +60,23 @@ pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
 psl <- pivot_longer(plt.savi, cols = starts_with("EH"))
 pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
 
-# change varibale names
+# change variable names
 pel <- rename(pel, evi = value)
 psl <- rename(psl, savi = value)
 pnl <- rename(pnl, nirv = value)
+
+# write these files to csv
+write.csv(pel, file = "eh_planet/eh_plot_evi.csv", row.names = F)
+write.csv(psl, file = "eh_planet/eh_plot_savi.csv", row.names = F)
+write.csv(psl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
+
+
+# read them in for analyses on the go
+pel <- read.csv("eh_planet/eh_plot_evi.csv", header = T)
+psl <- read.csv("eh_planet/eh_plot_savi.csv", header = T)
+pnl <- read.csv("eh_planet/eh_plot_nirv.csv", header = T)
+
+# something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 plt.vi <- full_join(plt.vi, pnl)

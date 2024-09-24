@@ -1,4 +1,8 @@
-Metadata for Etosha Heights Planet data acquisition and processing
+Metadata for Etosha Heights Planet data acquisition, processing, and analysis
+
+------------------------------------------------------------------------
+24 Sept 2024
+- I've been splitting the preprocessing and analysis script, with data copied to Google Drive. For some reason the zonal stats will not work with the Mac, but work ok on PC when data are on Drive. For now will write output of zonal stats to drive as tables in order to be able to read/process on the mac
 
 ------------------------------------------------------------------------
 16 Sept 2024
