@@ -27,8 +27,8 @@ ifelse(Sys.info()['sysname'] == "Darwin",
 veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
-
 eh.nirv <- rast(list.files(path = "eh_planet/nirv/", pattern = glob2rx("*.tif"), full.names = T))
+
 # set layer names 
 names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
 names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
@@ -43,6 +43,7 @@ veg.p <- project(veg.p, eh.evi)
 plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
 plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
+
 # set column headers based on file names
 #colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
 # colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
