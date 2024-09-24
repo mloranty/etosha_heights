@@ -72,9 +72,9 @@ write.csv(psl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
 
 
 # read them in for analyses on the go
-pel <- read.csv("eh_planet/eh_plot_evi.csv", header = T)
-psl <- read.csv("eh_planet/eh_plot_savi.csv", header = T)
-pnl <- read.csv("eh_planet/eh_plot_nirv.csv", header = T)
+pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
+psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
+pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
 
 # something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
 # join these dataframes
