@@ -103,6 +103,8 @@ prcp.day$wday <- wd(prcp.day$tmstmp)
 
 prcp.day <- prcp.day %>% group_by(site, wy) %>% arrange(tmstmp) %>% mutate(precip.cum = cumsum(precip.mm))
   
+write.csv(prcp.day, file = "eh_met_data/daily_precip.csv", row.names = F)
+
 ta.day$tmstmp <- as.POSIXct(strptime(paste(ta.day$year,ta.day$jday,sep=""),
                             format = "%Y%j"))
 

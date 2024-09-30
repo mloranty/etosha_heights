@@ -76,6 +76,14 @@ pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
 psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
 pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
 
+prcp <- read.csv("eh_met_data/daily_precip.csv", header = T)
+
+eh.prcp <- prcp %>%
+  group_by(tmstmp) %>%
+  summarise(eh.precip = mean(precip.mm))
+
+eh.prcp$tmstmp <- as.POSIXct(strptime(eh.prcp$tmstmp,
+                                      format = "%Y-%m-%d"))
 # something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
 # join these dataframes
 plt.vi <- full_join(pel, psl)
@@ -100,6 +108,12 @@ vcl <- plt.vi %>%
 # can only plot with POSIXct class
 vcl$ts <- as.POSIXct(vcl$timestamp)
 
+# barplot of site precip
+ggplot(data = eh.prcp,
+       aes(x = tmstmp, y = eh.precip, fill = "red")) +
+  geom_bar(stat = "identity", position = "dodge") +
+  xlim(c(min(vcl$ts), max(vcl$ts)))
+
 # plot evi timeseries
 e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
   geom_point() + 
@@ -110,6 +124,9 @@ e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) 
 s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "SAVI", 
+       title = "2024 Water Year") +
   scale_fill_discrete()
 
 n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
@@ -117,6 +134,18 @@ n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) 
   geom_line() +
   scale_fill_discrete()
 
+# trying to make a plot with precip and savi 
+ggplot() +
+  geom_line(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
+  geom_bar(data = eh.prcp, aes(x = tmstmp, y = (eh.precip*0.001)+0.125), stat = "identity") +
+ # xlim(c(min(vcl$ts), max(vcl$ts))) + 
+  ylim(c(0.125, 0.25))
+
+ggplot() +
+  geom_bar(data = eh.prcp, aes(x = tmstmp, y = eh.precip), stat = "identity") +
+  geom_line(data = vcl, aes(x = ts, y = svi*200, color = VegComm, group = VegComm)) +
+  xlim(c(min(vcl$ts), max(vcl$ts))) + 
+  ylim(c(0.125, 0.25))
 
 # make boxplots of mean January vi for 2023 & 2024
 sj23 <- plt.vi %>%
