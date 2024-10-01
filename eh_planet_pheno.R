@@ -84,6 +84,15 @@ eh.prcp <- prcp %>%
 
 eh.prcp$tmstmp <- as.POSIXct(strptime(eh.prcp$tmstmp,
                                       format = "%Y-%m-%d"))
+
+ta <- read.csv("eh_met_data/daily_air_temp.csv", header = T)
+
+eh.ta <- ta %>%
+  group_by(tmstmp) %>%
+  summarise(airTemp = mean(airTemp, na.rm = T))
+
+eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
+                                      format = "%Y-%m-%d"))
 # something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
 # join these dataframes
 plt.vi <- full_join(pel, psl)
@@ -108,32 +117,75 @@ vcl <- plt.vi %>%
 # can only plot with POSIXct class
 vcl$ts <- as.POSIXct(vcl$timestamp)
 
+# create var for the three major groupings
+   vg <- as.numeric(as.character(vcl$VegComm)) 
+    vcl$vg <- case_when(
+                vg %in% c(1:4) ~ "Mountain", 
+                vg %in% c(5:7) ~ "Wetland", 
+                vg > 7 ~ "Savanna Shrubland"
+                  )
+
+#------------------------------------------------------------#
+My_Theme = theme(
+  axis.title = element_text(size = 16),
+  axis.text = element_text(size = 14),
+  legend.text = element_text(size = 12),
+  legend.title = element_text(size = 12))
+
 # barplot of site precip
-ggplot(data = eh.prcp,
-       aes(x = tmstmp, y = eh.precip, fill = "red")) +
-  geom_bar(stat = "identity", position = "dodge") +
-  xlim(c(min(vcl$ts), max(vcl$ts)))
+p <- ggplot(data = eh.prcp,
+       aes(x = tmstmp, y = eh.precip)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        xlim(c(min(vcl$ts), max(vcl$ts))) +
+        labs(y = "Precipitation (mm)",
+             x = NULL) +
+      My_Theme
 
 # plot evi timeseries
 e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
-  scale_fill_discrete()
+  labs(color = "Vegetation \nCommunity", 
+       y = "EVI", 
+       x = NULL,
+       title = "2023-2024") +
+  scale_fill_discrete() +
+  My_Theme
 
 # plot savi time series
 s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
   geom_point() + 
-  geom_line() +
+  geom_line(linetype = vg) +
   labs(color = "Vegetation \nCommunity", 
        y = "SAVI", 
-       title = "2024 Water Year") +
+       x = NULL,
+       title = "2023-2024") +
+  My_Theme +
+ # theme(legend.position = "top") +
   scale_fill_discrete()
 
 n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
-  scale_fill_discrete()
+  labs(color = "Vegetation \nCommunity", 
+       y = "NIRv", 
+       x = NULL,
+       title = "2023-2024") +
+  scale_fill_discrete() +
+  My_Theme
 
+# two panel precip vi plot
+s + p +plot_layout((ncol=1))
+ggsave("sawma_figures/savi_precip.png", width = 10, height = 8, units = "in")
+
+e + p  + plot_layout((ncol=1))
+ggsave("sawma_figures/evi_precip.png", width = 10, height = 8, units = "in")
+
+n + p +plot_layout((ncol=1))
+ggsave("sawma_figures/nirv_precip.png", width = 10, height = 8, units = "in")
+
+
+#---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
   geom_line(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
@@ -146,6 +198,14 @@ ggplot() +
   geom_line(data = vcl, aes(x = ts, y = svi*200, color = VegComm, group = VegComm)) +
   xlim(c(min(vcl$ts), max(vcl$ts))) + 
   ylim(c(0.125, 0.25))
+#---------------------------------------------#
+
+#---------------------------------------------#
+# plot with temp and precip
+ggplot() +
+  geom_bar(data = eh.prcp, aes(x = tmstmp, y = eh.precip), stat = "identity") +
+  geom_line(data = eh.ta, aes(x = tmstmp, y = airTemp*1.67)) +
+  xlim(c(min(vcl$ts), max(vcl$ts)))
 
 # make boxplots of mean January vi for 2023 & 2024
 sj23 <- plt.vi %>%
