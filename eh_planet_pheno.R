@@ -106,7 +106,14 @@ plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)),
 # create a factor for veg community
 plt.vi$VegComm <- as.factor(plt.vi$Associati0)
 
-# group by veg class
+# create a factor for the larger groups
+plt.vi$vg <- case_when(
+  plt.vi$Associati0 %in% c(1:4) ~ "Mountain", 
+  plt.vi$Associati0 %in% c(5:7) ~ "Wetland", 
+  plt.vi$Associati0 > 7 ~ "Savanna Shrubland"
+)
+
+# aggregate by veg class
 vcl <- plt.vi %>%
   group_by(VegComm,timestamp) %>%
   summarise(evi = mean(evi, na.rm = T),
@@ -117,13 +124,16 @@ vcl <- plt.vi %>%
 # can only plot with POSIXct class
 vcl$ts <- as.POSIXct(vcl$timestamp)
 
-# create var for the three major groupings
-   vg <- as.numeric(as.character(vcl$VegComm)) 
-    vcl$vg <- case_when(
-                vg %in% c(1:4) ~ "Mountain", 
-                vg %in% c(5:7) ~ "Wetland", 
-                vg > 7 ~ "Savanna Shrubland"
-                  )
+# aggregate by veg group
+vgr <- plt.vi %>%
+  group_by(vg,timestamp) %>%
+  summarise(evi = mean(evi, na.rm = T),
+            svi = mean(savi, na.rm = T),
+            nrv = mean(nirv, na.rm = T),
+            elev_m = mean(elev_m, na.rm = T))
+
+# can only plot with POSIXct class
+vgr$ts <- as.POSIXct(vgr$timestamp)
 
 #------------------------------------------------------------#
 My_Theme = theme(
@@ -152,10 +162,20 @@ e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) 
   scale_fill_discrete() +
   My_Theme
 
-# plot savi time series
+e <- ggplot(data = vgr, aes(x = ts, y = evi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "EVI", 
+       x = NULL,
+       title = "2023-2024") +
+  scale_fill_discrete() +
+  My_Theme
+
+# plot savi time series by association
 s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
   geom_point() + 
-  geom_line(linetype = vg) +
+  geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "SAVI", 
        x = NULL,
@@ -164,7 +184,29 @@ s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) 
  # theme(legend.position = "top") +
   scale_fill_discrete()
 
+# plot savi time series by veg group
+s <- ggplot(data = vgr, aes(x = ts, y = svi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "SAVI", 
+       x = NULL,
+       title = "2023-2024") +
+  My_Theme +
+  # theme(legend.position = "top") +
+  scale_fill_discrete()
+
 n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NIRv", 
+       x = NULL,
+       title = "2023-2024") +
+  scale_fill_discrete() +
+  My_Theme
+
+n <- ggplot(data = vgr, aes(x = ts, y = nrv, color = vg, group = vg)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 

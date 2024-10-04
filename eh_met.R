@@ -109,6 +109,7 @@ ta.day$tmstmp <- as.POSIXct(strptime(paste(ta.day$year,ta.day$jday,sep=""),
                             format = "%Y%j"))
 
 
+write.csv(ta.day, file = "eh_met_data/daily_air_temp.csv", row.names = F)
 
 
 # make plots of temp and precip
