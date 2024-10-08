@@ -82,10 +82,8 @@ write.csv(pnd, file = "eh_planet/eh_plot_ndvi.csv", row.names = F)
 pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
 psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
 pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
-<<<<<<< HEAD
 pnd <- na.omit(read.csv("eh_planet/eh_plot_ndvi.csv", header = T))
-# something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
-=======
+# something wonky here with a many to many relationship, this shouldn't be the case - it should be one to o
 
 prcp <- read.csv("eh_met_data/daily_precip.csv", header = T)
 
@@ -105,7 +103,6 @@ eh.ta <- ta %>%
 eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
                                       format = "%Y-%m-%d"))
 
->>>>>>> 34ac0d2b30719b0dab1f4859825d670daa816089
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 plt.vi <- full_join(plt.vi, pnl)
@@ -144,6 +141,7 @@ vgr <- plt.vi %>%
   summarise(evi = mean(evi, na.rm = T),
             svi = mean(savi, na.rm = T),
             nrv = mean(nirv, na.rm = T),
+            ndvi = mean(ndvi, na.rm = T),
             elev_m = mean(elev_m, na.rm = T))
 
 # can only plot with POSIXct class
@@ -157,7 +155,8 @@ tm.sd <- plt.vi %>%
   group_by(timestamp) %>%
   summarise(evi.sd = sd(evi, na.rm = T),
             savi.sd = sd(savi, na.rm = T),
-            nirv.sd =(sd(nirv, na.rm = T)))
+            nirv.sd =sd(nirv, na.rm = T),
+            ndvi.sd =sd(ndvi, na.rm = T))
 
 tm.sd$timestamp <- as.POSIXct(tm.sd$timestamp)
 
@@ -169,6 +168,7 @@ for (i in 1:nlyr(eh.nirv))
   eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
   eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
   eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
+  eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
 }
 
 #------------------------------------------------------------#
@@ -299,6 +299,36 @@ n.sd <- ggplot() +
   theme(legend.position = "none") + 
   My_Theme
 
+#-------------------NDVI------------------------#    
+da <- ggplot(data = vcl, aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+dg <- ggplot(data = vgr, aes(x = ts, y = ndvi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# plot standard deviation of NIRv
+d.sd <- ggplot() + 
+  geom_line(data = tm.sd, aes(x = timestamp, y = ndvi.sd)) + 
+  geom_point(data = tm.sd, aes(x = timestamp, y = ndvi.sd)) +
+  geom_line(data = eh.sd, aes(x = timestamp, y = ndvi.sd, color = "red")) +
+  geom_point(data = eh.sd, aes(x = timestamp, y = ndvi.sd, color = "red")) + 
+  labs(#color = "Vegetation \nCommunity", 
+    y = "NDVI Standard Deviation", 
+    x = NULL) +
+  theme(legend.position = "none") + 
+  My_Theme
 # two panel precip vi plot
 sa + p +plot_layout((ncol=1))
 ggsave("sawma_figures/savi_precip.png", width = 10, height = 8, units = "in")
@@ -317,6 +347,12 @@ ggsave("sawma_figures/nirv_precip.png", width = 10, height = 8, units = "in")
 
 n.sd + na + p +plot_layout((ncol=1))
 ggsave("sawma_figures/nirv_sd_precip.png", width = 10, height = 8, units = "in")
+
+da + p +plot_layout((ncol=1))
+ggsave("sawma_figures/ndvi_precip.png", width = 10, height = 8, units = "in")
+
+d.sd + da + p +plot_layout((ncol=1))
+ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
