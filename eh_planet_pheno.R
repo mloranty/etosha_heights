@@ -171,6 +171,10 @@ for (i in 1:nlyr(eh.nirv))
   eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
 }
 
+# make wide ndvi
+dw <- pivot_wider(pnd,names_from = name, values_from = ndvi)
+dw$
+
 #------------------------------------------------------------#
 #------------------- PLOTS ----------------------------------#
 #------------------------------------------------------------#
@@ -300,6 +304,10 @@ n.sd <- ggplot() +
   My_Theme
 
 #-------------------NDVI------------------------#    
+# upper and lower y-acis limits
+yl <- 0.15
+yu <- 0.37
+
 da <- ggplot(data = vcl, aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
@@ -309,6 +317,46 @@ da <- ggplot(data = vcl, aes(x = ts, y = ndvi, color = VegComm, group = VegComm)
   scale_fill_discrete() +
   My_Theme
 
+# mountains only 
+dmt <- vcl %>%
+  filter(VegComm %in% c(1:4)) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +  
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# wetlands only 
+dw <- vcl %>%
+  filter(VegComm %in% c(5:7)) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# savanna only 
+ds <- vcl %>%
+  filter(as.numeric(VegComm) > 7) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# broad veg groups
 dg <- ggplot(data = vgr, aes(x = ts, y = ndvi, color = vg, group = vg)) +
   geom_point() + 
   geom_line() +
@@ -353,6 +401,9 @@ ggsave("sawma_figures/ndvi_precip.png", width = 10, height = 8, units = "in")
 
 d.sd + da + p +plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
+
+dmt + dw + ds + plot_layout((ncol=1))
+ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
