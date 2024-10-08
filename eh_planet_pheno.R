@@ -404,6 +404,9 @@ ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
 
 dmt + dw + ds + plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
+
+dg + eg + sg + plot_layout((ncol=1))
+ggsave("sawma_figures/vi_comp.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
@@ -463,11 +466,29 @@ nj24 <- plt.vi %>%
   geom_boxplot(notch = TRUE, outlier.shape = NA) + 
   ylim(c(0.03,0.07))
 # make plots of vi maps through time
-ggplot() +
-  geom_spatraster(data = eh.savi) +
-  facet_wrap(~lyr, ncol = 4) +
-  scale_fill_viridis_c(limits = c(0.1,0.45))
+map.s <- ggplot() +
+  geom_spatraster(data = eh.savi[[9]]) +
+  #facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.0,0.35), name = "SAVI")
 
+map.e <- ggplot() +
+  geom_spatraster(data = eh.evi[[9]]) +
+  #facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.0,0.35), name = "EVI")
+
+map.n <- ggplot() +
+  geom_spatraster(data = eh.ndvi[[9]]) +
+  #facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
+
+map.n + map.e + map.s + plot_layout((ncol=1))
+ggsave("sawma_figures/vi_comp_map.png", width = 10, height = 8, units = "in")
+
+map.n <- ggplot() +
+  geom_spatraster(data = aggregate(eh.ndvi[[9]], fact = 100, fun = "mean")) +
+  xlim(15.25, 15.5) + 
+  #facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
 #------------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------------#
