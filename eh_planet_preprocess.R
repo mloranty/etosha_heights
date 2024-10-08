@@ -45,6 +45,12 @@ nirv <- function(x){
   n <- x[[8]]/10000
   (((n-r)/(n+r))*r)
 }
+
+ndvi <- function(x){
+  r <- x[[6]]/10000
+  n <- x[[8]]/10000
+  ((n-r)/(n+r))
+}
 # note water year begins on July 1 in southern hemisphere
 # determine water year from timestamp
 wy <- function(x)
@@ -87,8 +93,11 @@ so <- paste("eh_planet/savi/",f,"_savi.tif", sep = "")
 # nirv output filenames
 no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
 
+# ndvi output filenames
+nd <- paste("eh_planet/ndvi/",f,"_ndvi.tif", sep = "")
+
 # check to see which files exist to avoid unnecessary reprocessing
-p <- which(no %in% list.files(path = "eh_planet/nirv/", full.names = T)==F)
+p <- which(nd %in% list.files(path = "eh_planet/ndvi/", full.names = T)==F)
 
 #reference raster to align everything to the same extent
 ref <- rast(mos[1])
@@ -98,12 +107,14 @@ ref <- rast(mos[1])
 for(i in 1:length(p))
 {
   x <- rast(mos[p[i]])
-  e <- evi(x)
-  s <- savi(x)
-  n <- nirv(x)
-  e <- resample(e,ref, filename = eo[p[i]], overwrite = T)
-  s <- resample(s,ref, filename = so[p[i]], overwrite = T)
-  n <- resample(n,ref, filename = no[p[i]], overwrite = T)
+#  e <- evi(x)
+#  s <- savi(x)
+# n <- nirv(x)
+  d <- ndvi(x)
+#  e <- resample(e,ref, filename = eo[p[i]], overwrite = T)
+#  s <- resample(s,ref, filename = so[p[i]], overwrite = T)
+# n <- resample(n,ref, filename = no[p[i]], overwrite = T)
+  d <- resample(d,ref, filename = nd[p[i]], overwrite = T)
  # writeRaster(e,eo[i], overwrite = T)
  # writeRaster(s,so[i], overwrite = T)
   rm(x,s,e,n)
@@ -139,6 +150,8 @@ writeVector(veg.p, filename = "eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buff
 system("cp -r eh_planet/evi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
 system("cp -r eh_planet/savi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
 system("cp -r eh_planet/nirv \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
+system("cp -r eh_planet/ndvi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
+
 
 #-------------------------------------------------------------------------------------------
 

@@ -28,11 +28,13 @@ veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.nirv <- rast(list.files(path = "eh_planet/nirv/", pattern = glob2rx("*.tif"), full.names = T))
+eh.ndvi <- rast(list.files(path = "eh_planet/ndvi/", pattern = glob2rx("*.tif"), full.names = T))
 
 # set layer names 
 names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
 names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
 names(eh.nirv) <- c(substr(list.files(path = "eh_planet/nirv/",pattern = glob2rx("*.tif")),1,11))
+names(eh.ndvi) <- c(substr(list.files(path = "eh_planet/ndvi/",pattern = glob2rx("*.tif")),1,11))
 
 # not sure why this didn't carry through from the processing step...
 veg.p <- project(veg.p, eh.evi)
@@ -43,7 +45,7 @@ veg.p <- project(veg.p, eh.evi)
 plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
 plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
-
+plt.ndvi <- zonal(eh.ndvi,veg.p, fun = "mean", na.rm = T)
 # set column headers based on file names
 #colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
 # colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
@@ -55,31 +57,37 @@ plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
 plt.evi <- cbind(plt.evi, veg.p[,1:6])
 plt.savi <- cbind(plt.savi, veg.p[,1:6])
 plt.nirv <- cbind(plt.nirv, veg.p[,1:6])
+plt.ndvi <- cbind(plt.ndvi, veg.p[,1:6])
+
 # pivot longer 
 pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
 psl <- pivot_longer(plt.savi, cols = starts_with("EH"))
 pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
+pnd <- pivot_longer(plt.ndvi, cols = starts_with("EH"))
+
 
 # change variable names
 pel <- rename(pel, evi = value)
 psl <- rename(psl, savi = value)
 pnl <- rename(pnl, nirv = value)
+pnd <- rename(pnd, ndvi = value)
 
 # write these files to csv
 write.csv(pel, file = "eh_planet/eh_plot_evi.csv", row.names = F)
 write.csv(psl, file = "eh_planet/eh_plot_savi.csv", row.names = F)
 write.csv(pnl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
-
+write.csv(pnd, file = "eh_planet/eh_plot_ndvi.csv", row.names = F)
 
 # read them in for analyses on the go
 pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
 psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
 pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
-
+pnd <- na.omit(read.csv("eh_planet/eh_plot_ndvi.csv", header = T))
 # something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 plt.vi <- full_join(plt.vi, pnl)
+plt.vi <- full_join(plt.vi, pnd)
 #rm(pel,psl,plt.evi,plt.savi)
 
 # add time stamp here
@@ -95,6 +103,7 @@ vcl <- plt.vi %>%
   summarise(evi = mean(evi, na.rm = T),
             svi = mean(savi, na.rm = T),
             nrv = mean(nirv, na.rm = T),
+            ndvi = mean(ndvi, na.rm = T),
             elev_m = mean(elev_m, na.rm = T))
 
 # can only plot with POSIXct class
