@@ -93,7 +93,7 @@ eh.ta <- ta %>%
 
 eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
                                       format = "%Y-%m-%d"))
-# something wonky here with a many to many relationship, this shouldn't be the case - it should be one to one
+
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 plt.vi <- full_join(plt.vi, pnl)
@@ -135,13 +135,40 @@ vgr <- plt.vi %>%
 # can only plot with POSIXct class
 vgr$ts <- as.POSIXct(vgr$timestamp)
 
+# thinking about looking at changes in standard deviation through time
+# for both sample plots, and across the entire study area (each raster)
+
+# plot-level SD
+tm.sd <- plt.vi %>%
+  group_by(timestamp) %>%
+  summarise(evi.sd = sd(evi, na.rm = T),
+            savi.sd = sd(savi, na.rm = T),
+            nirv.sd =(sd(nirv, na.rm = T)))
+
+tm.sd$timestamp <- as.POSIXct(tm.sd$timestamp)
+
+# study area SD from across the images
+eh.sd <- tm.sd
+  
+for (i in 1:nlyr(eh.nirv))
+{
+  eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
+  eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
+  eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
+}
+
 #------------------------------------------------------------#
+#------------------- PLOTS ----------------------------------#
+#------------------------------------------------------------#
+
+# theme for the plots
 My_Theme = theme(
   axis.title = element_text(size = 16),
   axis.text = element_text(size = 14),
-  legend.text = element_text(size = 12),
-  legend.title = element_text(size = 12))
+  legend.text = element_text(size = 10),
+  legend.title = element_text(size = 10))
 
+#-------------------met variables------------------------#    
 # barplot of site precip
 p <- ggplot(data = eh.prcp,
        aes(x = tmstmp, y = eh.precip)) +
@@ -149,84 +176,133 @@ p <- ggplot(data = eh.prcp,
         xlim(c(min(vcl$ts), max(vcl$ts))) +
         labs(y = "Precipitation (mm)",
              x = NULL) +
-      My_Theme
+        My_Theme
 
+t <- ggplot(data = eh.ta, aes(x= tmstmp, y = airTemp)) +
+        geom_line() + 
+        xlim(c(min(vcl$ts), max(vcl$ts))) +
+        labs(y = "Air Temperature", 
+             x = NULL) + 
+        My_Theme
+#-------------------EVI------------------------#    
 # plot evi timeseries
-e <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
+ea <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "EVI", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   scale_fill_discrete() +
   My_Theme
 
-e <- ggplot(data = vgr, aes(x = ts, y = evi, color = vg, group = vg)) +
+# plot evi time series by veg group
+eg <- ggplot(data = vgr, aes(x = ts, y = evi, color = vg, group = vg)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "EVI", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   scale_fill_discrete() +
   My_Theme
 
+# plot standard deviation of EVI
+e.sd <- ggplot() + 
+  geom_line(data = tm.sd, aes(x = timestamp, y = evi.sd)) + 
+  geom_point(data = tm.sd, aes(x = timestamp, y = evi.sd)) +
+  geom_line(data = eh.sd, aes(x = timestamp, y = evi.sd, color = "red")) +
+  geom_point(data = eh.sd, aes(x = timestamp, y = evi.sd, color = "red")) + 
+  labs(#color = "Vegetation \nCommunity", 
+       y = "EVI Standard Deviation", 
+       x = NULL) +
+  theme(legend.position = "none") + 
+  My_Theme
+
+#-------------------SAVI------------------------#    
 # plot savi time series by association
-s <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
+sa <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "SAVI", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   My_Theme +
  # theme(legend.position = "top") +
   scale_fill_discrete()
 
 # plot savi time series by veg group
-s <- ggplot(data = vgr, aes(x = ts, y = svi, color = vg, group = vg)) +
+sg <- ggplot(data = vgr, aes(x = ts, y = svi, color = vg, group = vg)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "SAVI", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   My_Theme +
   # theme(legend.position = "top") +
   scale_fill_discrete()
 
-n <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
+# plot standard deviation of SAVi
+s.sd <- ggplot() + 
+  geom_line(data = tm.sd, aes(x = timestamp, y = savi.sd)) + 
+  geom_point(data = tm.sd, aes(x = timestamp, y = savi.sd)) +
+  geom_line(data = eh.sd, aes(x = timestamp, y = savi.sd, color = "red")) +
+  geom_point(data = eh.sd, aes(x = timestamp, y = savi.sd, color = "red")) + 
+  labs(#color = "Vegetation \nCommunity", 
+    y = "SAVI Standard Deviation", 
+    x = NULL) +
+  theme(legend.position = "none") + 
+  My_Theme 
+  
+
+  
+#-------------------NIRv------------------------#    
+na <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "NIRv", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   scale_fill_discrete() +
   My_Theme
 
-n <- ggplot(data = vgr, aes(x = ts, y = nrv, color = vg, group = vg)) +
+ng <- ggplot(data = vgr, aes(x = ts, y = nrv, color = vg, group = vg)) +
   geom_point() + 
   geom_line() +
   labs(color = "Vegetation \nCommunity", 
        y = "NIRv", 
-       x = NULL,
-       title = "2023-2024") +
+       x = NULL) +
   scale_fill_discrete() +
+  My_Theme
+
+# plot standard deviation of NIRv
+n.sd <- ggplot() + 
+  geom_line(data = tm.sd, aes(x = timestamp, y = nirv.sd)) + 
+  geom_point(data = tm.sd, aes(x = timestamp, y = nirv.sd)) +
+  geom_line(data = eh.sd, aes(x = timestamp, y = nirv.sd, color = "red")) +
+  geom_point(data = eh.sd, aes(x = timestamp, y = nirv.sd, color = "red")) + 
+  labs(#color = "Vegetation \nCommunity", 
+    y = "NIRv Standard Deviation", 
+    x = NULL) +
+  theme(legend.position = "none") + 
   My_Theme
 
 # two panel precip vi plot
-s + p +plot_layout((ncol=1))
+sa + p +plot_layout((ncol=1))
 ggsave("sawma_figures/savi_precip.png", width = 10, height = 8, units = "in")
 
-e + p  + plot_layout((ncol=1))
+s.sd + sa + p +plot_layout((ncol=1))
+ggsave("sawma_figures/savi_sd_precip.png", width = 10, height = 8, units = "in")
+
+ea + p  + plot_layout((ncol=1))
 ggsave("sawma_figures/evi_precip.png", width = 10, height = 8, units = "in")
 
-n + p +plot_layout((ncol=1))
+e.sd + ea + p  + plot_layout((ncol=1))
+ggsave("sawma_figures/evi_sd_precip.png", width = 10, height = 8, units = "in")
+
+na + p +plot_layout((ncol=1))
 ggsave("sawma_figures/nirv_precip.png", width = 10, height = 8, units = "in")
 
-
+n.sd + na + p +plot_layout((ncol=1))
+ggsave("sawma_figures/nirv_sd_precip.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
