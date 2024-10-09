@@ -486,9 +486,17 @@ ggsave("sawma_figures/vi_comp_map.png", width = 10, height = 8, units = "in")
 
 map.n <- ggplot() +
   geom_spatraster(data = aggregate(eh.ndvi[[9]], fact = 100, fun = "mean")) +
-  xlim(15.25, 15.5) + 
+  #xlim(15.25, 15.5) + 
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
+
+# test land cover map
+lc <- rast("sawma_figures/eh_rf_lc_test.tif")
+ggplot() +
+  geom_spatraster(data = lc) + 
+  scale_fill_brewer(palette = "Set3")
+
+plot(lc, col = rainbow(12))
 #------------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------------#
 #------------------------------------------------------------------------------------#
