@@ -67,6 +67,18 @@ met$tmstmp <- strptime(met$Timestamp, format = "%m/%d/%y %H:%M")
 met$year <- year(met$tmstmp)
 met$jday <- yday(met$tmstmp)
 
+# remove duplicate rows
+met <- met %>%
+  distinct()
+
+# cleanup column names and write to file
+names(met) <- c("timestamp", "SolarRad(wm2)", "precip(mm)", "LightningActivity", "LightningDis(km)",
+                "WindDir", "WindSpeed(m/s)", "GustSpeed(m/s)", "AirTemp", "RH", "AtmPressure(kPa)", "level.x", "level.y",
+                "maxPrecip(mm/hr)", "RH.Sensor.Temp", "Battery", "Batt.V(mV)", "RefPressure(kPa)", "LoggerTemp", "LoggerID",
+                "VaporPressure(kPa)", "tmstmp", "year", "yday")
+
+write.csv(met, file = paste("eh_met_data/eh_met_data_",Sys.Date(),".csv", sep = ""), row.names = F)
+
 # add site name
 site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge"),
                    logger = c("22569", "22572", "22575", "22576", "22583", "22584"))
@@ -100,20 +112,21 @@ prcp.day$tmstmp <- as.POSIXct(strptime(paste(prcp.day$year,prcp.day$jday,sep="")
 prcp.day$wy <- wy(prcp.day$tmstmp)
 prcp.day$wday <- wd(prcp.day$tmstmp)
 
-
+# calculate cumulative sum
 prcp.day <- prcp.day %>% group_by(site, wy) %>% arrange(tmstmp) %>% mutate(precip.cum = cumsum(precip.mm))
   
+#write to file
 write.csv(prcp.day, file = "eh_met_data/daily_precip.csv", row.names = F)
 
+# add timestamp to air temperature data
 ta.day$tmstmp <- as.POSIXct(strptime(paste(ta.day$year,ta.day$jday,sep=""),
                             format = "%Y%j"))
 
-
+# write daily air temp to file
 write.csv(ta.day, file = "eh_met_data/daily_air_temp.csv", row.names = F)
 
-
+#----------------------------------------------------------------------------------#
 # make plots of temp and precip
-
 ggplot(data = prcp.day,
        aes(x = tmstmp, y = precip.mm, group = site, fill = site)) +
 geom_bar(stat = "identity", position = "dodge")
