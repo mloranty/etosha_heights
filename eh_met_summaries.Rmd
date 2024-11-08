@@ -1,0 +1,58 @@
+---
+title: "Etosha Heights Met Summaries"
+author: "Mike Loranty"
+output: 
+  pdf_document:
+---  
+  
+  
+  
+```{r, include = F}
+# note we're running this from the windows machines
+# read in the met data file
+library(tidyverse)
+library(zoo)
+dat <- read.csv("G:/My Drive/Documents/research/giraffe/eh_met_data/eh_met_data_2024-10-29.csv", 
+                header = T)
+
+# create site var
+site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge"),
+                   LoggerID = c(22569, 22572, 22575, 22576, 22583, 22584))
+
+dat <- full_join(dat,site)
+
+# aggregate variables of interest to daily temporal resolution for plotting
+
+t.air <- dat %>%
+  select(year, yday, site, AirTemp, WindSpeed.m.s., WindDir,SolarRad.wm2.) %>%
+  group_by(site,year, yday) %>%
+  summarise(AirTemp = mean(AirTemp, na.rm = T),
+            wspd = mean(WindSpeed.m.s., na.rm = T)) %>%
+  mutate(tmstmp = strptime(paste(as.character(year),
+                          as.character(yday),sep=""),format = "%Y%j"),
+         t.wk = rollapplyr(AirTemp,7, mean, na.rm = T, fill = NA),
+         ws.wk = rollapplyr(wspd,7, mean, na.rm = T, fill = NA))
+
+prcp <- dat %>%
+  select(year, yday, site, precip.mm.) %>%
+  group_by(site,year, yday) %>%
+  summarise(precip.mm = sum(precip.mm., na.rm = T)) %>%
+  mutate(tmstmp = strptime(paste(as.character(year),
+                          as.character(yday),sep=""),
+                            format = "%Y%j"))
+  
+```
+  
+  
+```{r}
+  
+```
+  
+```{r}
+ggplot(data = prcp,
+       aes(x = tmstmp, y = precip.mm, group = site, color = site)) +
+geom_line()
+```
+  
+  
+  
