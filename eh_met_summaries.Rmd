@@ -7,7 +7,7 @@ output:
   
   
   
-```{r, include = F}
+```{r, echo=FALSE, results='asis', warning=FALSE, message = FALSE}
 # note we're running this from the windows machines
 # read in the met data file
 library(tidyverse)
@@ -21,17 +21,37 @@ site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "O
 
 dat <- full_join(dat,site)
 
-# aggregate variables of interest to daily temporal resolution for plotting
+# DEFINE FUNCTIONS TO CALCULATE WATER DAY/YEAR
+# note water year begins on July 1 in southern hemisphere
+# determine water year from timestamp
+wy <- function(x)
+{
+  #ifelse(is.POSIXct(x),,"Input is not Date/Time class")
+  ifelse(month(x)<7,year(x),year(x)+1)
+}
 
+# calculate water day from timestamp
+wd <- function(x)
+{
+  ifelse(leap_year(x),
+         ifelse(month(x)<7,yday(x)+184,yday(x)-182),
+         ifelse(month(x)<7,yday(x)+184,yday(x)-181))
+}
+# aggregate variables of interest to daily temporal resolution for plotting
+# air temperature
 t.air <- dat %>%
   select(year, yday, site, AirTemp, WindSpeed.m.s., WindDir,SolarRad.wm2.) %>%
   group_by(site,year, yday) %>%
   summarise(AirTemp = mean(AirTemp, na.rm = T),
             wspd = mean(WindSpeed.m.s., na.rm = T)) %>%
   mutate(tmstmp = strptime(paste(as.character(year),
-                          as.character(yday),sep=""),format = "%Y%j"),
-         t.wk = rollapplyr(AirTemp,7, mean, na.rm = T, fill = NA),
+                          as.character(yday),sep=""),format = "%Y%j")) 
+  t.air <- t.air %>%
+  group_by(site) %>%
+  mutate(t.wk = rollapplyr(AirTemp,7, mean, na.rm = T, fill = NA),
          ws.wk = rollapplyr(wspd,7, mean, na.rm = T, fill = NA))
+
+
 
 prcp <- dat %>%
   select(year, yday, site, precip.mm.) %>%
@@ -40,18 +60,64 @@ prcp <- dat %>%
   mutate(tmstmp = strptime(paste(as.character(year),
                           as.character(yday),sep=""),
                             format = "%Y%j"))
-  
+
+# calculate mean temp, precip, & wind speed for each site over all days with observations at each one
+mt <- t.air %>%
+  select(tmstmp, site, AirTemp) %>%
+  pivot_wider(names_from = site, values_from = AirTemp) %>%
+  drop_na() %>%
+  summarise((across(2:7, mean))) %>%
+  round(1)
+
+mp <- prcp %>%
+  group_by(site) %>%
+  select(tmstmp, site, precip.mm) %>%
+  pivot_wider(names_from = site, values_from = precip.mm) %>%
+  drop_na() %>%
+  summarise((across(2:7, sum))) %>%
+  round(0)
+
+mw <- t.air %>%
+  select(tmstmp, site, wspd) %>%
+  pivot_wider(names_from = site, values_from = wspd) %>%
+  drop_na() %>%
+  summarise((across(2:7, mean))) %>%
+  round(1)
+
+m <- full_join(mt, mp) %>%
+      full_join(mw)
+
+#m$Var <- c("Air Temperature", "Precipitation", "Windspeed")
+m <- data.frame(t(m))
+names(m) <- c("Air Temperature", "Precipitation", "Windspeed")
+knitr::kable(m)
 ```
   
   
-```{r}
-  
+```{r, echo=FALSE, results='asis', warning=FALSE}
+ggplot(data = t.air,
+       aes(x = tmstmp, y = t.wk, group = site, color = site)) +
+geom_line() +
+labs(color = "Site", 
+       y = expression(Air~Temperature~(degree*C)), 
+       x = NULL)
 ```
-  
+Figure 1. Smoothed time-series of daily mean temperatures for weather stations at Etosha Heights. Data are smoothed using a 7-day moving average, primarily for visualization. 
+
+```{r, echo=FALSE, results='asis', warning=FALSE}
+ggplot(data = t.air,
+       aes(x = tmstmp, y = ws.wk, group = site, color = site)) +
+geom_line() +
+labs(color = "Site", 
+       y = expression(Windspeed~(m~s^-1)), 
+       x = NULL)
+```
+Figure 2. Smoothed time-series of daily mean windspeed for weather stations at Etosha Heights. As with temperature in Figure 1, data are smoothed using a 7-day moving average, primarily for visualization. 
+
 ```{r}
 ggplot(data = prcp,
        aes(x = tmstmp, y = precip.mm, group = site, color = site)) +
-geom_line()
+geom_bar(stat = "identity", position = "dodge")
 ```
   
   
