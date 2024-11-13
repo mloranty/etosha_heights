@@ -89,8 +89,8 @@ m <- full_join(mt, mp) %>%
 
 #m$Var <- c("Air Temperature", "Precipitation", "Windspeed")
 m <- data.frame(t(m))
-names(m) <- c("Air Temperature", "Precipitation", "Windspeed")
-knitr::kable(m)
+names(m) <- c("Air Temperature (C)", "Precipitation (mm)", "Windspeed (m/s)")
+knitr::kable(m, caption = "Mean meterological conditions across all days with data at every site. Days with missing data at one or more sites were omitted. n = 353")
 ```
   
   
@@ -114,11 +114,28 @@ labs(color = "Site",
 ```
 Figure 2. Smoothed time-series of daily mean windspeed for weather stations at Etosha Heights. As with temperature in Figure 1, data are smoothed using a 7-day moving average, primarily for visualization. 
 
-```{r}
-ggplot(data = prcp,
-       aes(x = tmstmp, y = precip.mm, group = site, color = site)) +
-geom_bar(stat = "identity", position = "dodge")
+
+
+```{r, echo=FALSE, results='asis', warning=FALSE}
+
+# add water year and water day to precip data
+prcp$wy <- wy(prcp$tmstmp)
+prcp$wd <- wd(prcp$tmstmp)
+
+prcp <- prcp %>% 
+  group_by(site, wy) %>% 
+  arrange(tmstmp) %>% 
+  mutate(precip.cum = cumsum(precip.mm))
+
+prcp %>%
+  filter(wy==2024) %>%
+ggplot(
+       aes(x = tmstmp, y = precip.cum, group = site, color = site)) +
+geom_line() +
+  labs(color = "Site", 
+       y = "Cumulative Precipitation (mm)" , 
+       x = NULL)
 ```
   
-  
+Figure 3. Cumulative precipitation by site for the 2024 water year (beginning 1 July 2023). Note there was a sensor outage at Oupos beginning in March 2024 after which no data were recorded.  
   
