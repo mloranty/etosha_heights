@@ -41,6 +41,7 @@ wd <- function(x)
 # air temperature
 t.air <- dat %>%
   select(year, yday, site, AirTemp, WindSpeed.m.s., WindDir,SolarRad.wm2.) %>%
+  distinct() %>%
   group_by(site,year, yday) %>%
   summarise(AirTemp = mean(AirTemp, na.rm = T),
             wspd = mean(WindSpeed.m.s., na.rm = T)) %>%
@@ -55,6 +56,7 @@ t.air <- dat %>%
 
 prcp <- dat %>%
   select(year, yday, site, precip.mm.) %>%
+  distinct() %>%
   group_by(site,year, yday) %>%
   summarise(precip.mm = sum(precip.mm., na.rm = T)) %>%
   mutate(tmstmp = strptime(paste(as.character(year),
