@@ -1,6 +1,10 @@
 Metadata for Etosha Heights Planet data acquisition, processing, and analysis
 
 ------------------------------------------------------------------------
+25 Nov 2024
+- still no real satisfactory explanation for this issue, but moving ahead anyway. I've downloaded a few more images to get most of a fully year. New images were downloaded with only images from individual strips/satellite overpasses mosaiced. I then mosaiced the strips myself, calculating the mean for overlapping areas 
+
+------------------------------------------------------------------------
 7 Nov 2024
 - images seems are from a "TAP" issue according to planet - thought it is unclear what this means, exactly. 
 

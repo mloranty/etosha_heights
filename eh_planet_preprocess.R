@@ -20,7 +20,7 @@ library(randomForest)
 setwd("L:/projects/etosha_heights/")
 
 # define evi function for 8-band planet images
-# note the reflectance values are multiplied by 10000
+# note the reflectance values are divided by 10000
 evi <- function(x){
   b <- x[[2]]/10000
   r <- x[[6]]/10000
@@ -30,7 +30,7 @@ evi <- function(x){
 
 # define soil adjusted vi (savi) function for 8-band planet images
 # L = 0.5 after Huete et al 1988
-# note the reflectance values are multiplied by 10000
+# note the reflectance values are divided by 10000
 savi <- function(x){
   r <- x[[6]]/10000
   n <- x[[8]]/10000
@@ -39,13 +39,14 @@ savi <- function(x){
 
 # define near infrared reflectance of vegetation for 8-band planet images
 #  Badgley et al 2017
-# note the reflectance values are multiplied by 10000
+# note the reflectance values are divided by 10000
 nirv <- function(x){
   r <- x[[6]]/10000
   n <- x[[8]]/10000
-  (((n-r)/(n+r))*r)
+  ((((n-r)/(n+r))-0.08)*r)
 }
 
+# define ndvi for 8-band planet images
 ndvi <- function(x){
   r <- x[[6]]/10000
   n <- x[[8]]/10000
@@ -72,7 +73,7 @@ wd <- function(x)
 #------------------------------------------------------------------------------
 # list all composite files for the temporal stack
 mos <- list.files(path = "eh_planet", 
-                  pattern = glob2rx("*composite.tif"), 
+                  pattern = glob2rx("composite.tif"), 
                   recursive = T, 
                   full.names = T)
 
@@ -97,24 +98,24 @@ no <- paste("eh_planet/nirv/",f,"_nirv.tif", sep = "")
 nd <- paste("eh_planet/ndvi/",f,"_ndvi.tif", sep = "")
 
 # check to see which files exist to avoid unnecessary reprocessing
-p <- which(nd %in% list.files(path = "eh_planet/ndvi/", full.names = T)==F)
+#p <- which(nd %in% list.files(path = "eh_planet/ndvi/", full.names = T)==F)
 
 #reference raster to align everything to the same extent
 ref <- rast(mos[1])
 
 # calculate evi and savi and write to file
 # note we ran into some memory issues here
-for(i in 1:length(p))
+for(i in 1:length(mos))
 {
-  x <- rast(mos[p[i]])
-#  e <- evi(x)
-#  s <- savi(x)
-# n <- nirv(x)
+  x <- rast(mos[i])
+  e <- evi(x)
+  s <- savi(x)
+  n <- nirv(x)
   d <- ndvi(x)
-#  e <- resample(e,ref, filename = eo[p[i]], overwrite = T)
-#  s <- resample(s,ref, filename = so[p[i]], overwrite = T)
-# n <- resample(n,ref, filename = no[p[i]], overwrite = T)
-  d <- resample(d,ref, filename = nd[p[i]], overwrite = T)
+  e <- resample(e,ref, filename = eo[i], overwrite = T)
+  s <- resample(s,ref, filename = so[i], overwrite = T)
+  n <- resample(n,ref, filename = no[i], overwrite = T)
+  d <- resample(d,ref, filename = nd[i], overwrite = T)
  # writeRaster(e,eo[i], overwrite = T)
  # writeRaster(s,so[i], overwrite = T)
   rm(x,s,e,n)
