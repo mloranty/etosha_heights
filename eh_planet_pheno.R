@@ -39,18 +39,17 @@ names(eh.ndvi) <- c(substr(list.files(path = "eh_planet/ndvi/",pattern = glob2rx
 # not sure why this didn't carry through from the processing step...
 veg.p <- project(veg.p, eh.evi)
 
-# extract evi and savi values for each plot
-# plt.evi <- terra::extract(eh.evi[[1]],veg.p, weights = T)
-# plt.savi <- terra::extract(eh.savi,veg.p)
+# extract mean vi values for each plot
 plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
 plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
 plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
 plt.ndvi <- zonal(eh.ndvi,veg.p, fun = "mean", na.rm = T)
-# set column headers based on file names
-#colnames(plt.evi) <- c("ID", substr(list.files(path = "eh_planet/evi/"),1,11)) # differs based on zonal vs. extract
-# colnames(plt.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
-# colnames(plt.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
 
+# extract standard deviation of vi values for each plot
+plt.evi.sd <- zonal(eh.evi,veg.p, fun = "sd", na.rm = T)
+plt.savi.sd <- zonal(eh.savi,veg.p, fun = "sd", na.rm = T)
+plt.nirv.sd <- zonal(eh.nirv,veg.p, fun = "sd", na.rm = T)
+plt.ndvi.sd <- zonal(eh.ndvi,veg.p, fun = "sd", na.rm = T)
 
 
 # add variables for analysis/plotting
