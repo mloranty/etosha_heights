@@ -58,18 +58,41 @@ plt.savi <- cbind(plt.savi, veg.p[,1:6])
 plt.nirv <- cbind(plt.nirv, veg.p[,1:6])
 plt.ndvi <- cbind(plt.ndvi, veg.p[,1:6])
 
+# add variables for analysis/plotting
+plt.evi.sd <- cbind(plt.evi.sd, veg.p[,1:6])
+plt.savi.sd <- cbind(plt.savi.sd, veg.p[,1:6])
+plt.nirv.sd <- cbind(plt.nirv.sd, veg.p[,1:6])
+plt.ndvi.sd <- cbind(plt.ndvi.sd, veg.p[,1:6])
+
 # pivot longer 
 pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
 psl <- pivot_longer(plt.savi, cols = starts_with("EH"))
 pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
 pnd <- pivot_longer(plt.ndvi, cols = starts_with("EH"))
 
+# pivot longer 
+pel.sd <- pivot_longer(plt.evi.sd, cols = starts_with("EH"))
+psl.sd <- pivot_longer(plt.savi.sd, cols = starts_with("EH"))
+pnl.sd <- pivot_longer(plt.nirv.sd, cols = starts_with("EH"))
+pnd.sd <- pivot_longer(plt.ndvi.sd, cols = starts_with("EH"))
 
 # change variable names
 pel <- rename(pel, evi = value)
 psl <- rename(psl, savi = value)
 pnl <- rename(pnl, nirv = value)
 pnd <- rename(pnd, ndvi = value)
+
+# change variable names
+pel.sd <- rename(pel.sd, evi.sd = value)
+psl.sd <- rename(psl.sd, savi.sd = value)
+pnl.sd <- rename(pnl.sd, nirv.sd = value)
+pnd.sd <- rename(pnd.sd, ndvi.sd = value)
+
+# join the two data frames
+pel <- full_join(pel, pel.sd)
+psl <- full_join(psl, psl.sd)
+pnl <- full_join(pnl, pnl.sd)
+pnd <- full_join(pnd, pnd.sd)
 
 # write these files to csv
 write.csv(pel, file = "eh_planet/eh_plot_evi.csv", row.names = F)
