@@ -105,25 +105,26 @@ pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
 psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
 pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
 pnd <- na.omit(read.csv("eh_planet/eh_plot_ndvi.csv", header = T))
-# something wonky here with a many to many relationship, this shouldn't be the case - it should be one to o
 
-prcp <- read.csv("eh_met_data/daily_precip.csv", header = T)
+# read coords for veg height data from 2024, omit unnecessary data and transform coordinates to match other layers
+ht.crd <- read.csv("eh_veg_data/EH_canopy_height_coords_2024.csv", header = T)
+ht.crd <- vect(ht.crd, geom = c("lon.dd", "lat.dd"), crs = "+proj=longlat +datum=WGS84")[,1]
+ht.crd <- project(ht.crd, veg.p)
 
-eh.prcp <- prcp %>%
-  group_by(tmstmp) %>%
-  summarise(eh.precip = mean(precip.mm))
+# match plots by proximity
+crsrf <- as.data.frame(nearby(ht.crd, veg.p, k = 1))
+names(crsrf) <- c("Plot", "VMrec")
+crsrf$releve <- veg.p$Releve._n0[crsrf$VMrec]
 
-eh.prcp$tmstmp <- as.POSIXct(strptime(eh.prcp$tmstmp,
-                                      format = "%Y-%m-%d"))
+# read height data, summarise by plot, and join with releve info
+ht <- read.csv("eh_veg_data/EH_canopy_height_2024.csv", header = T) %>%
+  group_by(Plot) %>%
+  summarise(ht = mean(Ht, na.rm = T),
+            ht.sd = sd(Ht, na.rm = T))
 
-ta <- read.csv("eh_met_data/daily_air_temp.csv", header = T)
+# join height and cross ref data
+ht <- full_join(ht, crsrf)
 
-eh.ta <- ta %>%
-  group_by(tmstmp) %>%
-  summarise(airTemp = mean(airTemp, na.rm = T))
-
-eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
-                                      format = "%Y-%m-%d"))
 
 # join these dataframes
 plt.vi <- full_join(pel, psl)
@@ -196,6 +197,28 @@ for (i in 1:nlyr(eh.nirv))
 # make wide ndvi
 dw <- pivot_wider(pnd,names_from = name, values_from = ndvi)
 dw$
+
+#------------------------------------------------------------#
+#------------------- MET data--------------------------------#
+#------------------------------------------------------------#  
+  # read temp and precip data
+  prcp <- read.csv("eh_met_data/daily_precip.csv", header = T)
+
+eh.prcp <- prcp %>%
+  group_by(tmstmp) %>%
+  summarise(eh.precip = mean(precip.mm))
+
+eh.prcp$tmstmp <- as.POSIXct(strptime(eh.prcp$tmstmp,
+                                      format = "%Y-%m-%d"))
+
+ta <- read.csv("eh_met_data/daily_air_temp.csv", header = T)
+
+eh.ta <- ta %>%
+  group_by(tmstmp) %>%
+  summarise(airTemp = mean(airTemp, na.rm = T))
+
+eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
+                                    format = "%Y-%m-%d"))
 
 #------------------------------------------------------------#
 #------------------- PLOTS ----------------------------------#
@@ -388,7 +411,7 @@ dg <- ggplot(data = vgr, aes(x = ts, y = ndvi, color = vg, group = vg)) +
   scale_fill_discrete() +
   My_Theme
 
-# plot standard deviation of NIRv
+# plot standard deviation of NDVI
 d.sd <- ggplot() + 
   geom_line(data = tm.sd, aes(x = timestamp, y = ndvi.sd)) + 
   geom_point(data = tm.sd, aes(x = timestamp, y = ndvi.sd)) +
@@ -427,7 +450,7 @@ ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
 dmt + dw + ds + plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
 
-dg + eg + sg + plot_layout((ncol=1))
+dg + eg + sg + ng + plot_layout((ncol=1))
 ggsave("sawma_figures/vi_comp.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
