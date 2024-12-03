@@ -129,8 +129,12 @@ ht <- full_join(ht, crsrf)
 # join these dataframes
 plt.vi <- full_join(pel, psl)
 plt.vi <- full_join(plt.vi, pnl)
-plt.vi <- full_join(plt.vi, pnd)
+plt.vi <- full_join(plt.vi, pnd) %>%
+  rename(releve = Releve._n0)
+
 #rm(pel,psl,plt.evi,plt.savi)
+
+plt.vi <- left_join(plt.vi, ht)
 
 # add time stamp here
 plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
