@@ -198,10 +198,6 @@ for (i in 1:nlyr(eh.nirv))
   eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
 }
 
-# make wide ndvi
-dw <- pivot_wider(pnd,names_from = name, values_from = ndvi)
-dw$
-
 #------------------------------------------------------------#
 #------------------- MET data--------------------------------#
 #------------------------------------------------------------#  

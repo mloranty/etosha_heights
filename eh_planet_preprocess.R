@@ -119,6 +119,7 @@ for(i in 1:length(mos))
  # writeRaster(e,eo[i], overwrite = T)
  # writeRaster(s,so[i], overwrite = T)
   rm(x,s,e,n)
+  gc()
 }
 
 # remove hidden temporary files

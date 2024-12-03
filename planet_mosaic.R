@@ -21,7 +21,12 @@ library(tidyterra)
 setwd("L:/projects/etosha_heights/eh_planet")
 
 # list all composite strips
-f <- list.files(pattern = glob2rx("*strip*composite.tif"), 
+# f <- list.files(pattern = glob2rx("*strip*composite.tif"), 
+#                 full.names = T,
+#                 recursive = T)
+
+# list all clipped files
+f <- list.files(pattern = glob2rx("*SR*.tif"), 
                 full.names = T,
                 recursive = T)
   
@@ -35,7 +40,7 @@ for(i in 1:length(d))
   setwd(d[i])
   
   # list strips to be mosaiced
-  f <- as.list(list.files(pattern = glob2rx("*strip*composite.tif"), 
+  f <- as.list(list.files(pattern = glob2rx("*SR*.tif"), 
                   full.names = T,
                   recursive = T))
   
