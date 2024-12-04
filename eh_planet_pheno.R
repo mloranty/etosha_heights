@@ -450,7 +450,7 @@ ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
 dmt + dw + ds + plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
 
-dg + eg + sg + ng + plot_layout((ncol=1))
+dg + eg + sg + ng + p + plot_layout((ncol=1))
 ggsave("sawma_figures/vi_comp.png", width = 10, height = 8, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
@@ -548,16 +548,22 @@ plot(lc, col = rainbow(12))
 # RANDOM FOREST CLASSIFICATION 
 
 # select which layers to use - just for workflow development purposes at this point
-lyr <- 19:24
+lyr <- 3:18
 
 # create data frame for validation/training
-savi <- plt.savi[,lyr]
+ndvi <- plt.ndvi[,lyr]
 
 # add veg association as a factor
-savi$lc <- as.numeric(as.factor(veg.p$Associati0))
+ndvi$lc <- as.numeric(as.factor(veg.p$Associati0))
+
+# create a factor for the larger groups
+ndvi$hb <- case_when(
+  ndvi$lc %in% c(1:4) ~ 1, # Mountain
+  ndvi$lc %in% c(5:7) ~ 2, #Wetland 
+  ndvi$lc > 7 ~ 3) #Savanna
 
 # remove na
-savi <- na.omit(savi)
+vi <- na.omit(ndvi)
 
 # IS ths necessary, or just to help keep track of things? 
 #landClass <- data.frame(lcID = 1:3,
@@ -569,14 +575,14 @@ set.seed(11213)
 # randomly select half of the records
 sampleSamp <- sample(seq(1,172),172/2)
 
-savi$sampleType <- "train"
+vi$sampleType <- "train"
 
-savi$sampleType[sampleSamp] <- "valid"
+vi$sampleType[sampleSamp] <- "valid"
 
 
 # create training and validation subsets
-trainD <- savi[savi$sampleType=="train",]
-validD<- savi[savi$sampleType=="valid",]
+trainD <- vi[vi$sampleType=="train",]
+validD<- vi[vi$sampleType=="valid",]
 
 
 #------------Random Forest Classification of RGB data------------#
