@@ -1,6 +1,11 @@
 Metadata for Etosha Heights Planet data acquisition, processing, and analysis
 
 ------------------------------------------------------------------------
+5 Dec 2024
+- creating separate script for random forest lc modeling
+- using all pixels within the sample plots, rather than means, also trying reflectance in addition to VIs
+
+------------------------------------------------------------------------
 3 Dec 2024
 - the refelectance issues seems to be slight variation between images acquired by different sensors. Some images are acquired up to ~30 min apart, so some of this could be due to differences in illumination/viewing geometry
 - downloaded a few more images to fill gaps in the seasonal timeseries, and the more recently downloaded images are only mosaiced by strip, or not at all, so that I can moasaic manually

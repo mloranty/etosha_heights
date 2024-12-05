@@ -1,0 +1,149 @@
+######################################
+#
+# map Etosha Heights veg classes
+# using Planet Imagery
+#
+# see eh_planet
+# MML 12/05/2023
+######################################
+
+rm(list = ls())
+
+#load required packages
+library(terra)
+library(tidyverse)
+library(patchwork)
+library(tidyterra)
+library(caret)
+library(randomForest)
+#set working directory
+
+#set working directory depending on which computer being used
+ifelse(Sys.info()['sysname'] == "Darwin",
+       setwd("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe"),
+       setwd("G:/My Drive/Documents/research/giraffe"))
+
+#------------------------------------------------------------------------------------#
+# read in the stacks of surface reflectance data along with sample plot polygons
+#------------------------------------------------------------------------------------#
+srf <- list.files(path = "L:/projects/etosha_heights/eh_planet", 
+                  pattern = glob2rx("EH*8b*sr*composite.tif"), 
+                  recursive = T, 
+                  full.names = T)
+
+# surface reflectance files have different extents, so just reading individually for now
+sr <- rast(srf[10])
+
+#------------------------------------------------------------------------------------#
+# read in the stacks of vi data along with sample plot polygons
+#------------------------------------------------------------------------------------#
+eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
+eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
+eh.nirv <- rast(list.files(path = "eh_planet/nirv/", pattern = glob2rx("*.tif"), full.names = T))
+eh.ndvi <- rast(list.files(path = "eh_planet/ndvi/", pattern = glob2rx("*.tif"), full.names = T))
+
+# set layer names 
+names(eh.evi) <- c(substr(list.files(path = "eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.savi) <- c(substr(list.files(path = "eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.nirv) <- c(substr(list.files(path = "eh_planet/nirv/",pattern = glob2rx("*.tif")),1,11))
+names(eh.ndvi) <- c(substr(list.files(path = "eh_planet/ndvi/",pattern = glob2rx("*.tif")),1,11))
+
+#------------------------------------------------------------------------------------#
+# cleanup veg data
+#------------------------------------------------------------------------------------#
+veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
+veg.p <- project(veg.p, eh.evi) # not sure why this didn't carry through from the processing step...
+veg.p <- veg.p[,1:3]  # retain only necessary rows
+names(veg.p) <- c("assoc", "class", "releve")
+veg.p$ID <- 1:nrow(veg.p) # add an ID column
+
+veg.p$hab <- case_when(        # create variable for habitat type
+  veg.p$assoc %in% c(1:4) ~ 1, # Mountain
+  veg.p$assoc %in% c(5:7) ~ 2, # Wetland 
+  veg.p$assoc > 7 ~ 3)         # Savanna
+
+#------------------------------------------------------------------------------------#
+# extract reflectance/vi values and append veg classes
+#------------------------------------------------------------------------------------#
+
+psr <- terra::extract(sr, veg.p, FUN = NULL) %>% #extract pixel values
+        full_join(psr,veg.p, copy = T) %>%       # join with the veg data for modeling
+        na.omit()
+
+p.evi <- terra::extract(eh.evi, veg.p, FUN = NULL) %>% #extract pixel values
+          full_join(veg.p, copy = T) %>%
+          na.omit()
+  
+p.ndvi <- terra::extract(eh.ndvi, veg.p, FUN = NULL) %>% #extract pixel values
+  full_join(veg.p, copy = T) %>%
+  na.omit()
+
+p.nir <- terra::extract(eh.nirv, veg.p, FUN = NULL) %>% #extract pixel values
+  full_join(veg.p, copy = T) %>%
+  na.omit()
+
+p.savi <- terra::extract(eh.savi, veg.p, FUN = NULL) %>% #extract pixel values
+  full_join(veg.p, copy = T) %>%
+  na.omit()
+#------------------------------------------------------------------------------------#
+# RANDOM FOREST CLASSIFICATION
+#------------------------------------------------------------------------------------#
+rfd <- psr
+rfd <- p.evi
+rfd <- p.ndvi
+# select which layers to use as predictors
+lyr <- 2:19
+
+rec <- nrow(rfd)
+# IS ths necessary, or just to help keep track of things? 
+#landClass <- data.frame(lcID = 1:3,
+#                      landCover = c ("ground", "tall", "water"))
+
+# specify training and validation data sets
+set.seed(11213)
+
+# randomly select half of the records
+sampleSamp <- sample(seq(1,rec),rec/2)
+
+rfd$sampleType <- "train"
+
+rfd$sampleType[sampleSamp] <- "valid"
+
+
+# create training and validation subsets
+trainD <- rfd[rfd$sampleType=="train",]
+validD<- rfd[rfd$sampleType=="valid",]
+
+
+#------------Random Forest Classification of RGB data------------#
+# run the Random Forest model
+tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the training data
+                   number = 10, # number 10 fold
+                   repeats = 10) # number of repeats
+###random forests
+#Typically square root of number of variables
+rf.grid <- expand.grid(mtry=1:4) # number of variables available for splitting at each tree node
+
+rf_model <- caret::train(x = trainD[,c(lyr)], #digital number data
+                         y = as.factor(trainD$hab), #land class we want to predict
+                         method = "rf", #use random forest
+                         metric="Accuracy", #assess by accuracy
+                         trControl = tc, #use parameter tuning method
+                         tuneGrid = rf.grid) #parameter tuning grid
+#check output
+rf_model
+
+# evaluate validation data
+confusionMatrix(predict(rf_model,validD[,lyr]),as.factor(validD$hab))
+
+# apply RF model to study site data
+sv <- eh.evi[[1:18]]
+rf_prediction <- predict(sv, rf_model, na.rm = T,
+                         filename = "eh_rf_hab_evi_test.tif",
+                         overwrite = T, progress = T)
+
+#plot the data
+plot(rf_prediction)
+
+
+

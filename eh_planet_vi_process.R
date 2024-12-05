@@ -73,7 +73,7 @@ wd <- function(x)
 #------------------------------------------------------------------------------
 # list all composite files for the temporal stack
 mos <- list.files(path = "eh_planet", 
-                  pattern = glob2rx("composite.tif"), 
+                  pattern = glob2rx("EH*8b*sr*composite.tif"), 
                   recursive = T, 
                   full.names = T)
 
