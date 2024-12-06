@@ -223,7 +223,7 @@ eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
 #------------------------------------------------------------#
 #------------------- PLOTS ----------------------------------#
 #------------------------------------------------------------#
-
+#-------------------------------------------------------------
 # theme for the plots
 My_Theme = theme(
   axis.title = element_text(size = 16),
@@ -237,7 +237,7 @@ p <- ggplot(data = eh.prcp,
        aes(x = tmstmp, y = eh.precip)) +
         geom_bar(stat = "identity", position = "dodge") +
         xlim(c(min(vcl$ts), max(vcl$ts))) +
-        labs(y = "Precipitation (mm)",
+        labs(y = "Precip (mm)",
              x = NULL) +
         My_Theme
 
@@ -451,7 +451,10 @@ dmt + dw + ds + plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
 
 dg + eg + sg + ng + p + plot_layout((ncol=1))
-ggsave("sawma_figures/vi_comp.png", width = 10, height = 8, units = "in")
+ggsave("sawma_figures/agu_vi_comp.png", width = 8, height = 12, units = "in")
+
+da +ea + sa + na + p + plot_layout((ncol=1))
+ggsave("sawma_figures/agu_vi_comp_cl.png", width = 8, height = 12, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
@@ -512,22 +515,27 @@ nj24 <- plt.vi %>%
   ylim(c(0.03,0.07))
 # make plots of vi maps through time
 map.s <- ggplot() +
-  geom_spatraster(data = eh.savi[[9]]) +
+  geom_spatraster(data = eh.savi[[13]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.35), name = "SAVI")
 
 map.e <- ggplot() +
-  geom_spatraster(data = eh.evi[[9]]) +
+  geom_spatraster(data = eh.evi[[13]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.35), name = "EVI")
 
 map.n <- ggplot() +
-  geom_spatraster(data = eh.ndvi[[9]]) +
+  geom_spatraster(data = eh.ndvi[[13]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
 
-map.n + map.e + map.s + plot_layout((ncol=1))
-ggsave("sawma_figures/vi_comp_map.png", width = 10, height = 8, units = "in")
+map.v <- ggplot() +
+  geom_spatraster(data = eh.nirv[[13]]) +
+  #facet_wrap(~lyr, ncol = 4) +
+  scale_fill_viridis_c(limits = c(0.0,0.05), name = "NIRv")
+
+map.n + map.e + map.s + map.v + plot_layout((ncol=1))
+ggsave("sawma_figures/agu_vi_comp_map20240405.png", width = 8, height = 12, units = "in")
 
 map.n <- ggplot() +
   geom_spatraster(data = aggregate(eh.ndvi[[9]], fact = 100, fun = "mean")) +
@@ -542,6 +550,24 @@ ggplot() +
   scale_fill_brewer(palette = "Set3")
 
 plot(lc, col = rainbow(12))
-#------------------------------------------------------------------------------------#
+#-------------------------------------------------------------#
 
+
+
+
+#------------------------------------------------------------#
+#--------- fit phenology curves to seasonal data-------------#
+#------------------------------------------------------------#
+
+
+vgr$date <- as.Date(vgr$timestamp)
+vcl$date <- as.Date(vcl$timestamp)
+
+
+mt <- filter(vgr, vg == "Mountain")
+
+
+mt.phn <- zoo(mt$ndvi, mt$timestamp)
+mt.ex <- greenExplore(mt.phn)
+plotExplore(mt.ex)
 
