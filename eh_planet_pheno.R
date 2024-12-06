@@ -454,7 +454,7 @@ dg + eg + sg + ng + p + plot_layout((ncol=1))
 ggsave("sawma_figures/agu_vi_comp.png", width = 8, height = 12, units = "in")
 
 da +ea + sa + na + p + plot_layout((ncol=1))
-ggsave("sawma_figures/agu_vi_comp_cl.png", width = 8, height = 12, units = "in")
+ggsave("sawma_figures/agu_vi_comp_cl.png", width = 10, height = 12, units = "in")
 #---------------------------------------------#
 # trying to make a plot with precip and savi 
 ggplot() +
@@ -515,27 +515,27 @@ nj24 <- plt.vi %>%
   ylim(c(0.03,0.07))
 # make plots of vi maps through time
 map.s <- ggplot() +
-  geom_spatraster(data = eh.savi[[13]]) +
+  geom_spatraster(data = eh.savi[[15]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.35), name = "SAVI")
 
 map.e <- ggplot() +
-  geom_spatraster(data = eh.evi[[13]]) +
+  geom_spatraster(data = eh.evi[[15]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.35), name = "EVI")
 
 map.n <- ggplot() +
-  geom_spatraster(data = eh.ndvi[[13]]) +
+  geom_spatraster(data = eh.ndvi[[15]]) +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
 
 map.v <- ggplot() +
-  geom_spatraster(data = eh.nirv[[13]]) +
+  geom_spatraster(data = eh.nirv[[15]]) +
   #facet_wrap(~lyr, ncol = 4) +
-  scale_fill_viridis_c(limits = c(0.0,0.05), name = "NIRv")
+  scale_fill_viridis_c(limits = c(0.0,0.06), name = "NIRv")
 
 map.n + map.e + map.s + map.v + plot_layout((ncol=1))
-ggsave("sawma_figures/agu_vi_comp_map20240405.png", width = 8, height = 12, units = "in")
+ggsave("sawma_figures/agu_vi_comp_map20240430b.png", width = 8, height = 12, units = "in")
 
 map.n <- ggplot() +
   geom_spatraster(data = aggregate(eh.ndvi[[9]], fact = 100, fun = "mean")) +
@@ -543,6 +543,8 @@ map.n <- ggplot() +
   #facet_wrap(~lyr, ncol = 4) +
   scale_fill_viridis_c(limits = c(0.0,0.5), name = "NDVI")
 
+da
+ggsave("sawma_figures/agu_ndvi.png", width = 8, height = 8, units = "in")
 # test land cover map
 lc <- rast("sawma_figures/eh_rf_lc_test.tif")
 ggplot() +
