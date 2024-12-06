@@ -92,7 +92,7 @@ rfd <- psr
 rfd <- p.evi
 rfd <- p.ndvi
 # select which layers to use as predictors
-lyr <- 2:19
+lyr <- 2:20
 
 rec <- nrow(rfd)
 # IS ths necessary, or just to help keep track of things? 
@@ -130,20 +130,32 @@ rf_model <- caret::train(x = trainD[,c(lyr)], #digital number data
                          metric="Accuracy", #assess by accuracy
                          trControl = tc, #use parameter tuning method
                          tuneGrid = rf.grid) #parameter tuning grid
+
+rf_model_cl <- caret::train(x = trainD[,c(lyr)], #digital number data
+                         y = as.factor(trainD$assoc), #land class we want to predict
+                         method = "rf", #use random forest
+                         metric="Accuracy", #assess by accuracy
+                         trControl = tc, #use parameter tuning method
+                         tuneGrid = rf.grid) #parameter tuning grid
 #check output
 rf_model
+rf_model_cl
 
 # evaluate validation data
 confusionMatrix(predict(rf_model,validD[,lyr]),as.factor(validD$hab))
+confusionMatrix(predict(rf_model_cl,validD[,lyr]),as.factor(validD$assoc))
 
 # apply RF model to study site data
-sv <- eh.evi[[1:18]]
-rf_prediction <- predict(sv, rf_model, na.rm = T,
-                         filename = "eh_rf_hab_evi_test.tif",
+sv <- eh.ndvi
+rf_prediction_cl <- predict(sv, rf_model_cl, na.rm = T,
+                         filename = "eh_rf_hab_ndvi_test.tif",
                          overwrite = T, progress = T)
 
+ 
 #plot the data
 plot(rf_prediction)
 
 
-
+map.cl <- ggplot() +
+  geom_spatraster(data = rf_prediction_cl)
+ggsave("sawma_figures/agu_rf_class_prediction_map_ndvi.png", width = 18, heigh = 6, units = "in")

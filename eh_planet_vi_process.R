@@ -72,7 +72,7 @@ wd <- function(x)
 # See Collapsed code for planet vi calcs, otherwise skip this section 
 #------------------------------------------------------------------------------
 # list all composite files for the temporal stack
-mos <- list.files(path = "eh_planet", 
+mos <- list.files(path = "L:/projects/etosha_heights/eh_planet", 
                   pattern = glob2rx("EH*8b*sr*composite.tif"), 
                   recursive = T, 
                   full.names = T)
@@ -155,5 +155,23 @@ system("cp -r eh_planet/nirv \"G:/My Drive/Documents/research/giraffe/data/eh_pl
 system("cp -r eh_planet/ndvi \"G:/My Drive/Documents/research/giraffe/data/eh_planet\"")
 
 
-#-------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------#
+# resample surface reflectance mosaics 
+#---------------------------------------------------------------------------------#
+eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
+
+srf <- list.files(path = "L:/projects/etosha_heights/eh_planet", 
+                  pattern = glob2rx("EH*8b*sr*composite.tif"), 
+                  recursive = T, 
+                  full.names = T)
+f <- sapply(strsplit(srf,"/"), FUN = "[", 6)
+
+sro <- paste("L:/projects/etosha_heights/eh_planet/sr_resample/",f, sep = "")
+
+for(i in 1:length(srf)){
+  x <- rast(srf[i])
+  resample(x,eh.evi, filename = sro[i], overwrite = T)
+  gc()
+}
+#---------------------------------------------------------------------------------#
 
