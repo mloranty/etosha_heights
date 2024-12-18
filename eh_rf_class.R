@@ -153,7 +153,7 @@ rf_prediction_cl <- predict(sv, rf_model_cl, na.rm = T,
 
  
 #plot the data
-plot(rf_prediction)
+plot(rf_prediction_cl)
 
 
 map.cl <- ggplot() +

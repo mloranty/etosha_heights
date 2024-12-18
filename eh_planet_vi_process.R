@@ -170,7 +170,7 @@ sro <- paste("L:/projects/etosha_heights/eh_planet/sr_resample/",f, sep = "")
 
 for(i in 1:length(srf)){
   x <- rast(srf[i])
-  resample(x,eh.evi, filename = sro[i], overwrite = T)
+  resample(x,eh.evi, filename = sro[i], overwrite = T, progress = T, method = "bilinear", threads = T)
   gc()
 }
 #---------------------------------------------------------------------------------#
