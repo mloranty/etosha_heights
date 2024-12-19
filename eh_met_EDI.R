@@ -16,24 +16,6 @@ ifelse(Sys.info()['sysname'] == "Darwin",
        setwd("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe"),
        setwd("G:/My Drive/Documents/research/giraffe"))
 
-#setwd("L:/projects/etosha_heights/")
-
-# DEFINE FUNCTIONS TO CALCULATE WATER DAY/YEAR
-# note water year begins on July 1 in southern hemisphere
-# determine water year from timestamp
-wy <- function(x)
-{
-  #ifelse(is.POSIXct(x),,"Input is not Date/Time class")
-  ifelse(month(x)<7,year(x),year(x)+1)
-}
-
-# calculate water day from timestamp
-wd <- function(x)
-{
-  ifelse(leap_year(x),
-         ifelse(month(x)<7,yday(x)+184,yday(x)-182),
-         ifelse(month(x)<7,yday(x)+184,yday(x)-181))
-}
 
 # READ DATA
 # list data files

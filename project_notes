@@ -1,6 +1,12 @@
 Metadata for Etosha Heights Planet data acquisition, processing, and analysis
 
 ------------------------------------------------------------------------
+19 Dec 2024
+- cleaning data to submit to EDI
+- data that I downloaded in May 2024 includes vapor pressure instead of RH for some reason, with all values being NA. Fortunately Martina's downloads cover the period as well, so I am removing my files from the processing stream. 
+- creating a separate script just for EDI processing, which will only collate all half hourly data
+
+------------------------------------------------------------------------
 5 Dec 2024
 - creating separate script for random forest lc modeling
 - using all pixels within the sample plots, rather than means, also trying reflectance in addition to VIs
