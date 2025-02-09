@@ -450,8 +450,8 @@ ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
 dmt + dw + ds + plot_layout((ncol=1))
 ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
 
-dg + eg + sg + ng + p + plot_layout((ncol=1))
-ggsave("sawma_figures/agu_vi_comp.png", width = 8, height = 12, units = "in")
+dg + eg + theme(legend.position="none")+ sg+ theme(legend.position="none") + ng+ theme(legend.position="none") + p + plot_layout((ncol=1))
+ggsave("sawma_figures/ajwr_vi_comp.png", width = 8, height = 12, units = "in")
 
 da +ea + sa + na + p + plot_layout((ncol=1))
 ggsave("sawma_figures/agu_vi_comp_cl.png", width = 10, height = 12, units = "in")
