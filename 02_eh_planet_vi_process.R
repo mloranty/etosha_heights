@@ -124,14 +124,14 @@ for(i in 1:length(mos))
     rm(s)
   }
   
-  if(file.exists(so[i])==F)
+  if(file.exists(no[i])==F)
   {
     n <- nirv(x)
     n <- resample(n,ref, filename = no[i], overwrite = T)
     rm(n)
   }  
   
-  if(file.exists(so[i])==F)
+  if(file.exists(nd[i])==F)
   {
     d <- ndvi(x)
     d <- resample(d,ref, filename = nd[i], overwrite = T)

@@ -21,7 +21,8 @@ library(randomForest)
 #set working directory depending on which computer being used
 ifelse(Sys.info()['sysname'] == "Darwin",
        setwd("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe"),
-       setwd("G:/My Drive/Documents/research/giraffe"))
+       setwd("L:/projects/etosha_heights/"))
+#       setwd("G:/My Drive/Documents/research/giraffe"))
 
 # read in the stacks of evi and savi data along with sample plot polygons
 veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
