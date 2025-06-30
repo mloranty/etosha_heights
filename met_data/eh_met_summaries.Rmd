@@ -7,17 +7,19 @@ output:
   
   
   
-```{r, echo=FALSE, results='asis', warning=FALSE, message = FALSE}
+```{r, echo=FALSE, results='hide', warning=FALSE, message = FALSE}
 # note we're running this from the windows machines
 # read in the met data file
 library(tidyverse)
 library(zoo)
-dat <- read.csv("G:/My Drive/Documents/research/giraffe/eh_met_data/eh_met_data_2024-10-29.csv", 
-                header = T)
+ifelse(Sys.info()['sysname'] == "Darwin",
+       dat <- read.csv("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe/eh_met_data/eh_met_data_2025-06-30.csv"),
+       dat <- read.csv("G:/My Drive/Documents/research/giraffe/eh_met_data/eh_met_data_2025-06-30.csv"))
+
 
 # create site var
 site <- data.frame(site =c("Vlakwater", "Witgat", "Serengeti", "Swartposdam", "Oupos", "Lion Lodge"),
-                   LoggerID = c(22569, 22572, 22575, 22576, 22583, 22584))
+                   loggerID = c("z6-22569", "z6-22572", "z6-22575", "z6-22576", "z6-22583", "z6-22584"))
 
 dat <- full_join(dat,site)
 
@@ -40,48 +42,48 @@ wd <- function(x)
 # aggregate variables of interest to daily temporal resolution for plotting
 # air temperature
 t.air <- dat %>%
-  select(year, yday, site, AirTemp, WindSpeed.m.s., WindDir,SolarRad.wm2.) %>%
+  select(year, yday, site, t.air, wind.spd, wind.dir,solar.rad) %>%
   distinct() %>%
   group_by(site,year, yday) %>%
-  summarise(AirTemp = mean(AirTemp, na.rm = T),
-            wspd = mean(WindSpeed.m.s., na.rm = T)) %>%
+  summarise(t.air = mean(t.air, na.rm = T),
+            wind.spd = mean(wind.spd, na.rm = T)) %>%
   mutate(tmstmp = strptime(paste(as.character(year),
                           as.character(yday),sep=""),format = "%Y%j")) 
   t.air <- t.air %>%
   group_by(site) %>%
-  mutate(t.wk = rollapplyr(AirTemp,7, mean, na.rm = T, fill = NA),
-         ws.wk = rollapplyr(wspd,7, mean, na.rm = T, fill = NA))
+  mutate(t.wk = rollapplyr(t.air,7, mean, na.rm = T, fill = NA),
+         ws.wk = rollapplyr(wind.spd,7, mean, na.rm = T, fill = NA))
 
 
 
 prcp <- dat %>%
-  select(year, yday, site, precip.mm.) %>%
+  select(year, yday, site, precip) %>%
   distinct() %>%
   group_by(site,year, yday) %>%
-  summarise(precip.mm = sum(precip.mm., na.rm = T)) %>%
+  summarise(precip = sum(precip, na.rm = T)) %>%
   mutate(tmstmp = strptime(paste(as.character(year),
                           as.character(yday),sep=""),
                             format = "%Y%j"))
 
 # calculate mean temp, precip, & wind speed for each site over all days with observations at each one
 mt <- t.air %>%
-  select(tmstmp, site, AirTemp) %>%
-  pivot_wider(names_from = site, values_from = AirTemp) %>%
+  select(tmstmp, site, t.air) %>%
+  pivot_wider(names_from = site, values_from = t.air) %>%
   drop_na() %>%
   summarise((across(2:7, mean))) %>%
   round(1)
 
 mp <- prcp %>%
   group_by(site) %>%
-  select(tmstmp, site, precip.mm) %>%
-  pivot_wider(names_from = site, values_from = precip.mm) %>%
+  select(tmstmp, site, precip) %>%
+  pivot_wider(names_from = site, values_from = precip) %>%
   drop_na() %>%
   summarise((across(2:7, sum))) %>%
   round(0)
 
 mw <- t.air %>%
-  select(tmstmp, site, wspd) %>%
-  pivot_wider(names_from = site, values_from = wspd) %>%
+  select(tmstmp, site, wind.spd) %>%
+  pivot_wider(names_from = site, values_from = wind.spd) %>%
   drop_na() %>%
   summarise((across(2:7, mean))) %>%
   round(1)
@@ -90,13 +92,15 @@ m <- full_join(mt, mp) %>%
       full_join(mw)
 
 #m$Var <- c("Air Temperature", "Precipitation", "Windspeed")
-m <- data.frame(t(m))
-names(m) <- c("Air Temperature (C)", "Precipitation (mm)", "Windspeed (m/s)")
-knitr::kable(m, caption = "Mean meterological conditions across all days with data at every site. Days with missing data at one or more sites were omitted. n = 353")
+
 ```
   
   
 ```{r, echo=FALSE, results='asis', warning=FALSE}
+m <- data.frame(t(m))
+names(m) <- c("Air Temperature (C)", "Precipitation (mm)", "Windspeed (m/s)")
+knitr::kable(m, caption = "Mean meterological conditions across all days with data at every site. Days with missing data at one or more sites were omitted. n = 353")
+
 ggplot(data = t.air,
        aes(x = tmstmp, y = t.wk, group = site, color = site)) +
 geom_line() +
@@ -127,7 +131,7 @@ prcp$wd <- wd(prcp$tmstmp)
 prcp <- prcp %>% 
   group_by(site, wy) %>% 
   arrange(tmstmp) %>% 
-  mutate(precip.cum = cumsum(precip.mm))
+  mutate(precip.cum = cumsum(precip))
 
 prcp %>%
   filter(wy==2024) %>%
