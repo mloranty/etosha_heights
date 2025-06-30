@@ -21,18 +21,19 @@ library(randomForest)
 #set working directory depending on which computer being used
 ifelse(Sys.info()['sysname'] == "Darwin",
        setwd("/Users/mloranty/Library/CloudStorage/GoogleDrive-mloranty@colgate.edu/My Drive/Documents/research/giraffe"),
-       setwd("G:/My Drive/Documents/research/giraffe"))
+       setwd("L:/projects/etosha_heights/"))
+ #     setwd("G:/My Drive/Documents/research/giraffe"))
 
 #------------------------------------------------------------------------------------#
 # read in the stacks of surface reflectance data along with sample plot polygons
 #------------------------------------------------------------------------------------#
-srf <- list.files(path = "L:/projects/etosha_heights/eh_planet", 
-                  pattern = glob2rx("EH*8b*sr*composite.tif"), 
+srf <- list.files(path = "L:/projects/etosha_heights/eh_planet/sr_resample/", 
+                  pattern = glob2rx("EH*8b*sr*composite_resample.tif"), 
                   recursive = T, 
                   full.names = T)
 
 # surface reflectance files have different extents, so just reading individually for now
-sr <- rast(srf[10])
+sr <- rast(srf)
 
 #------------------------------------------------------------------------------------#
 # read in the stacks of vi data along with sample plot polygons
@@ -91,8 +92,9 @@ p.savi <- terra::extract(eh.savi, veg.p, FUN = NULL) %>% #extract pixel values
 rfd <- psr
 rfd <- p.evi
 rfd <- p.ndvi
-# select which layers to use as predictors
-lyr <- 2:20
+
+# select which layers to use as predictors (column IDs in extracted data)
+lyr <- c(2:6,8:16,18:28)
 
 rec <- nrow(rfd)
 # IS ths necessary, or just to help keep track of things? 
@@ -122,7 +124,7 @@ tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the tra
                    repeats = 10) # number of repeats
 ###random forests
 #Typically square root of number of variables
-rf.grid <- expand.grid(mtry=1:4) # number of variables available for splitting at each tree node
+rf.grid <- expand.grid(mtry=1:5) # number of variables available for splitting at each tree node
 
 rf_model <- caret::train(x = trainD[,c(lyr)], #digital number data
                          y = as.factor(trainD$hab), #land class we want to predict
@@ -141,14 +143,18 @@ rf_model_cl <- caret::train(x = trainD[,c(lyr)], #digital number data
 rf_model
 rf_model_cl
 
+
+saveRDS(rf_model, "eh_rf_models/ndvi_rf_test.rds")
+
+mod_test <- readRDS("eh_rf_models/ndvi_rf_test.rds")
 # evaluate validation data
 confusionMatrix(predict(rf_model,validD[,lyr]),as.factor(validD$hab))
 confusionMatrix(predict(rf_model_cl,validD[,lyr]),as.factor(validD$assoc))
 
 # apply RF model to study site data
 sv <- eh.ndvi
-rf_prediction_cl <- predict(sv, rf_model_cl, na.rm = T,
-                         filename = "eh_rf_hab_ndvi_test.tif",
+rf_prediction_cl <- predict(eh.ndvi, rf_model_cl, na.rm = T,
+                         filename = "eh_rf_predictions/eh_rf_hab_ndvi.tif",
                          overwrite = T, progress = T)
 
  
