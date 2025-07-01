@@ -8,6 +8,9 @@
 ######################################
 
 rm(list = ls())
+# need to run the following to get GDAL on the supercomputer
+#  . /local/gdal/bin/activate
+# and then conda deactivate 
 
 #load required packages
 library(terra)
