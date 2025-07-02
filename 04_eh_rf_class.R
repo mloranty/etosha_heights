@@ -16,7 +16,7 @@ rm(list = ls())
 library(terra)
 library(tidyverse)
 library(patchwork)
-library(tidyterra)
+#library(tidyterra)
 library(caret)
 library(randomForest)
 #set working directory
