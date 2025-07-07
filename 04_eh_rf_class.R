@@ -8,12 +8,15 @@
 ######################################
 
 rm(list = ls())
+# need to run the following to get GDAL on the supercomputer
+#  . /local/gdal/bin/activate
+# and then conda deactivate 
 
 #load required packages
 library(terra)
 library(tidyverse)
 library(patchwork)
-library(tidyterra)
+#library(tidyterra)
 library(caret)
 library(randomForest)
 #set working directory
@@ -144,7 +147,7 @@ rf_model
 rf_model_cl
 
 
-saveRDS(rf_model, "eh_rf_models/ndvi_rf_test.rds")
+saveRDS(rf_model_cl, "eh_rf_models/ndvi_rf.rds")
 
 mod_test <- readRDS("eh_rf_models/ndvi_rf_test.rds")
 # evaluate validation data
@@ -153,7 +156,7 @@ confusionMatrix(predict(rf_model_cl,validD[,lyr]),as.factor(validD$assoc))
 
 # apply RF model to study site data
 sv <- eh.ndvi
-rf_prediction_cl <- predict(eh.ndvi, rf_model_cl, na.rm = T,
+rf_prediction_cl <- predict(eh.ndvi[[-c(6,16)]], rf_model_cl, na.rm = T,
                          filename = "eh_rf_predictions/eh_rf_hab_ndvi.tif",
                          overwrite = T, progress = T)
 
