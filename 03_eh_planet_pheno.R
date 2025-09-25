@@ -24,7 +24,7 @@ ifelse(Sys.info()['sysname'] == "Darwin",
        setwd("L:/projects/etosha_heights/"))
 #       setwd("G:/My Drive/Documents/research/giraffe"))
 
-# read in the stacks of evi and savi data along with sample plot polygons
+# read in the stacks of vi data along with sample plot polygons
 veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))

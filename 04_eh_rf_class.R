@@ -77,18 +77,23 @@ psr <- terra::extract(sr, veg.p, FUN = NULL) %>% #extract pixel values
 p.evi <- terra::extract(eh.evi, veg.p, FUN = NULL) %>% #extract pixel values
           full_join(veg.p, copy = T) %>%
           na.omit()
+write.csv(p.evi, "eh_vi_extracts/eh_plot_evi.csv", row.names = F)
   
 p.ndvi <- terra::extract(eh.ndvi, veg.p, FUN = NULL) %>% #extract pixel values
   full_join(veg.p, copy = T) %>%
   na.omit()
+write.csv(p.ndvi, "eh_vi_extracts/eh_plot_ndvi.csv", row.names = F)
 
 p.nir <- terra::extract(eh.nirv, veg.p, FUN = NULL) %>% #extract pixel values
   full_join(veg.p, copy = T) %>%
   na.omit()
+write.csv(p.nir, "eh_vi_extracts/eh_plot_nirv.csv", row.names = F)
 
 p.savi <- terra::extract(eh.savi, veg.p, FUN = NULL) %>% #extract pixel values
   full_join(veg.p, copy = T) %>%
   na.omit()
+write.csv(p.savi, "eh_vi_extracts/eh_plot_savi.csv", row.names = F)
+
 #------------------------------------------------------------------------------------#
 # RANDOM FOREST CLASSIFICATION
 #------------------------------------------------------------------------------------#

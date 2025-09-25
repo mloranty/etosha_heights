@@ -3,7 +3,7 @@ Metadata for Etosha Heights Planet data acquisition, processing, and analysis
 ------------------------------------------------------------------------
 30 June 2025
 - updating data/cleaning/collating scripts
-- there have been some changes in loogger channel position, resuling in empty NA columns - will include code to pitch those columns 
+- there have been some changes in logger channel position, resuling in empty NA columns - will include code to pitch those columns 
 - creating a separate script just for EDI processing, which will only collate all half hourly data
 
 ------------------------------------------------------------------------
