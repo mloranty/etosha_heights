@@ -14,8 +14,7 @@ library(terra)
 library(tidyverse)
 library(patchwork)
 library(tidyterra)
-library(caret)
-library(randomForest)
+
 #set working directory
 
 #set working directory depending on which computer being used
@@ -24,7 +23,10 @@ ifelse(Sys.info()['sysname'] == "Darwin",
        setwd("L:/projects/etosha_heights/"))
 #       setwd("G:/My Drive/Documents/research/giraffe"))
 
+
+#---------------------------------------------------------------------------------------------------------------------------------#
 # read in the stacks of vi data along with sample plot polygons
+#---------------------------------------------------------------------------------------------------------------------------------#
 veg.p <- vect("eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
 eh.evi <- rast(list.files(path = "eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
 eh.savi <- rast(list.files(path = "eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
@@ -40,72 +42,84 @@ names(eh.ndvi) <- c(substr(list.files(path = "eh_planet/ndvi/",pattern = glob2rx
 # not sure why this didn't carry through from the processing step...
 veg.p <- project(veg.p, eh.evi)
 
-# extract mean vi values for each plot
-plt.evi <- zonal(eh.evi,veg.p, fun = "mean", na.rm = T)
-plt.savi <- zonal(eh.savi,veg.p, fun = "mean", na.rm = T)
-plt.nirv <- zonal(eh.nirv,veg.p, fun = "mean", na.rm = T)
-plt.ndvi <- zonal(eh.ndvi,veg.p, fun = "mean", na.rm = T)
+#---------------------------------------------------------------------------------------------------------------------------------#
+# extract all pixels within each plot for RF modeling
+#---------------------------------------------------------------------------------------------------------------------------------#
 
-# extract standard deviation of vi values for each plot
-plt.evi.sd <- zonal(eh.evi,veg.p, fun = "sd", na.rm = T)
-plt.savi.sd <- zonal(eh.savi,veg.p, fun = "sd", na.rm = T)
-plt.nirv.sd <- zonal(eh.nirv,veg.p, fun = "sd", na.rm = T)
-plt.ndvi.sd <- zonal(eh.ndvi,veg.p, fun = "sd", na.rm = T)
+# clean up veg data to append to pixel values
+veg.r <- veg.p[,1:3]  # retain only necessary rows
+names(veg.r) <- c("assoc", "class", "releve")
+veg.r$ID <- 1:nrow(veg.p) # add an ID column
 
+veg.r$hab <- case_when(        # create variable for habitat type
+  veg.r$assoc %in% c(1:4) ~ 1, # Mountain
+  veg.r$assoc %in% c(5:7) ~ 2, # Wetland 
+  veg.r$assoc > 7 ~ 3)         # Savanna
 
-# add variables for analysis/plotting
-plt.evi <- cbind(plt.evi, veg.p[,1:6])
-plt.savi <- cbind(plt.savi, veg.p[,1:6])
-plt.nirv <- cbind(plt.nirv, veg.p[,1:6])
-plt.ndvi <- cbind(plt.ndvi, veg.p[,1:6])
+#------------------------------------------------------------------------------------#
+# extract vi values and append veg classes
+#------------------------------------------------------------------------------------#
+# note we can use exact = T to get fractional pixel coverage
+# not sure this is necessary since releves are meant to be representative
+p.evi <- terra::extract(eh.evi, veg.r, FUN = NULL) %>% #extract pixel values
+  full_join(veg.r, copy = T) %>%
+  na.omit()
+write.csv(p.evi, "eh_vi_extracts/eh_plot_pix_evi.csv", row.names = F)
 
-# add variables for analysis/plotting
-plt.evi.sd <- cbind(plt.evi.sd, veg.p[,1:6])
-plt.savi.sd <- cbind(plt.savi.sd, veg.p[,1:6])
-plt.nirv.sd <- cbind(plt.nirv.sd, veg.p[,1:6])
-plt.ndvi.sd <- cbind(plt.ndvi.sd, veg.p[,1:6])
+p.ndvi <- terra::extract(eh.ndvi, veg.r, FUN = NULL) %>% #extract pixel values
+  full_join(veg.r, copy = T) %>%
+  na.omit()
+write.csv(p.ndvi, "eh_vi_extracts/eh_plot_pix_ndvi.csv", row.names = F)
 
-# pivot longer 
-pel <- pivot_longer(plt.evi, cols = starts_with("EH"))
-psl <- pivot_longer(plt.savi, cols = starts_with("EH"))
-pnl <- pivot_longer(plt.nirv, cols = starts_with("EH"))
-pnd <- pivot_longer(plt.ndvi, cols = starts_with("EH"))
+p.nir <- terra::extract(eh.nirv, veg.r, FUN = NULL) %>% #extract pixel values
+  full_join(veg.r, copy = T) %>%
+  na.omit()
+write.csv(p.nir, "eh_vi_extracts/eh_plot_pix_nirv.csv", row.names = F)
 
-# pivot longer 
-pel.sd <- pivot_longer(plt.evi.sd, cols = starts_with("EH"))
-psl.sd <- pivot_longer(plt.savi.sd, cols = starts_with("EH"))
-pnl.sd <- pivot_longer(plt.nirv.sd, cols = starts_with("EH"))
-pnd.sd <- pivot_longer(plt.ndvi.sd, cols = starts_with("EH"))
+p.savi <- terra::extract(eh.savi, veg.r, FUN = NULL) %>% #extract pixel values
+  full_join(veg.r, copy = T) %>%
+  na.omit()
+write.csv(p.savi, "eh_vi_extracts/eh_plot_pix_savi.csv", row.names = F)
 
-# change variable names
-pel <- rename(pel, evi = value)
-psl <- rename(psl, savi = value)
-pnl <- rename(pnl, nirv = value)
-pnd <- rename(pnd, ndvi = value)
+rm(veg.r)
 
-# change variable names
-pel.sd <- rename(pel.sd, evi.sd = value)
-psl.sd <- rename(psl.sd, savi.sd = value)
-pnl.sd <- rename(pnl.sd, nirv.sd = value)
-pnd.sd <- rename(pnd.sd, ndvi.sd = value)
+#---------------------------------------------------------------------------------------------------------------------------------#
+# calculate plot-level means for data analysis
+#---------------------------------------------------------------------------------------------------------------------------------#
+veg.p <- veg.p[,1:6]
+names(veg.p) <- c("assoc", "class", "releve", "date", "elev", "aspect")
 
-# join the two data frames
-pel <- full_join(pel, pel.sd)
-psl <- full_join(psl, psl.sd)
-pnl <- full_join(pnl, pnl.sd)
-pnd <- full_join(pnd, pnd.sd)
+pnd <- pivot_longer(p.ndvi, cols = starts_with("EH")) %>%
+  group_by(releve, name) %>%
+  summarise(ndvi = mean(value, na.rm = T),
+            ndvi.sd = sd(value, na.rm = T)) 
+  
+ 
+pel <- pivot_longer(p.evi, cols = starts_with("EH")) %>%
+  group_by(releve, name) %>%
+  summarise(evi = mean(value, na.rm = T),
+            evi.sd = sd(value, na.rm = T))  
+  
 
-# write these files to csv
-write.csv(pel, file = "eh_planet/eh_plot_evi.csv", row.names = F)
-write.csv(psl, file = "eh_planet/eh_plot_savi.csv", row.names = F)
-write.csv(pnl, file = "eh_planet/eh_plot_nirv.csv", row.names = F)
-write.csv(pnd, file = "eh_planet/eh_plot_ndvi.csv", row.names = F)
+psl <- pivot_longer(p.savi, cols = starts_with("EH")) %>%
+  group_by(releve, name) %>%
+  summarise(savi = mean(value, na.rm = T),
+            savi.sd = sd(value, na.rm = T))  
+  
+  
+pnl <- pivot_longer(p.nir, cols = starts_with("EH")) %>%
+  group_by(releve, name) %>%
+  summarise(nir = mean(value, na.rm = T),
+            nir.sd = sd(value, na.rm = T))
 
-# read them in for analyses on the go
-pel <- na.omit(read.csv("eh_planet/eh_plot_evi.csv", header = T))
-psl <- na.omit(read.csv("eh_planet/eh_plot_savi.csv", header = T))
-pnl <- na.omit(read.csv("eh_planet/eh_plot_nirv.csv", header = T))
-pnd <- na.omit(read.csv("eh_planet/eh_plot_ndvi.csv", header = T))
+plt.vi <- full_join(as.data.frame(veg.p),pnd)
+plt.vi <- full_join(plt.vi2,pel)
+plt.vi <- full_join(plt.vi2,psl)
+plt.vi <- full_join(plt.vi2,pnl)
+
+#---------------------------------------------------------------------------------------------------------------------------------#
+# add field data on veg height
+#---------------------------------------------------------------------------------------------------------------------------------#
 
 # read coords for veg height data from 2024, omit unnecessary data and transform coordinates to match other layers
 ht.crd <- read.csv("eh_veg_data/EH_canopy_height_coords_2024.csv", header = T)
@@ -115,7 +129,7 @@ ht.crd <- project(ht.crd, veg.p)
 # match plots by proximity
 crsrf <- as.data.frame(nearby(ht.crd, veg.p, k = 1))
 names(crsrf) <- c("Plot", "VMrec")
-crsrf$releve <- veg.p$Releve._n0[crsrf$VMrec]
+crsrf$releve <- veg.p$releve[crsrf$VMrec]
 
 # read height data, summarise by plot, and join with releve info
 ht <- read.csv("eh_veg_data/EH_canopy_height_2024.csv", header = T) %>%
@@ -126,23 +140,39 @@ ht <- read.csv("eh_veg_data/EH_canopy_height_2024.csv", header = T) %>%
 # join height and cross ref data
 ht <- full_join(ht, crsrf)
 
-
-# join these dataframes
-plt.vi <- full_join(pel, psl)
-plt.vi <- full_join(plt.vi, pnl)
-plt.vi <- full_join(plt.vi, pnd) %>%
-  rename(releve = Releve._n0)
-
-#rm(pel,psl,plt.evi,plt.savi)
-
+# join with plot-level vi data
 plt.vi <- left_join(plt.vi, ht)
 
+# write to csv 
+write.csv(plt.vi,"eh_vi_extracts/eh_plot_mean_vi.csv", row.names = F)
+#---------------------------------------------------------------------------------------------------------------------------------#
+# calculate mean/sd values for each vi layer
+#---------------------------------------------------------------------------------------------------------------------------------#
+
+# study area SD from across the images
+eh.sd <- as.data.frame(names(eh.ndvi))
+eh.sd[,2:5] <- 1.0
+names(eh.sd) <- c("name", "ndvi", "evi", "savi", "nirv")
+
+
+for (i in 1:nlyr(eh.nirv))
+{
+  eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
+  eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
+  eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
+  eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
+}
+
+write.csv(eh.sd, "eh_vi_extracts/eh_site_vi_sd.csv", row.names = F)
+#---------------------------------------------------------------------------------------------------------------------------------#
+# probably start new script here for data analysis
+#---------------------------------------------------------------------------------------------------------------------------------#
 # add time stamp here
 plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
                              format = "%Y%m%d")
 
 # create a factor for veg community
-plt.vi$VegComm <- as.factor(plt.vi$Associati0)
+plt.vi$VegComm <- as.factor(plt.vi$assoc)
 
 # create a factor for the larger groups
 plt.vi$vg <- case_when(
@@ -151,6 +181,7 @@ plt.vi$vg <- case_when(
   plt.vi$Associati0 > 7 ~ "Savanna Shrubland"
 )
 
+#-----------------------------------------------------------------------------#
 # aggregate by veg class
 vcl <- plt.vi %>%
   group_by(VegComm,timestamp) %>%
@@ -188,16 +219,7 @@ tm.sd <- plt.vi %>%
 
 tm.sd$timestamp <- as.POSIXct(tm.sd$timestamp)
 
-# study area SD from across the images
-eh.sd <- tm.sd
-  
-for (i in 1:nlyr(eh.nirv))
-{
-  eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
-  eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
-  eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
-  eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
-}
+
 
 #------------------------------------------------------------#
 #------------------- MET data--------------------------------#

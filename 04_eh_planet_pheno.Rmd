@@ -1,0 +1,155 @@
+---
+title: "Etosha Heights Plot Vegetation Indices"
+output: html_document
+date: "2025-09-25"
+---
+
+```{r setup, include=FALSE}
+# read vi rasters and values extracted for each veg plot
+knitr::opts_chunk$set(echo = TRUE)
+library(terra)
+library(tidyverse)
+```
+
+```{r, echo = F}
+# read in the stacks of vi data along with sample plot polygons
+veg.p <- vect("L:/projects/etosha_heights/eh_veg_data/DB_EtoshaHeights_VegTransects_5m_buffer.shp")
+eh.evi <- rast(list.files(path = "L:/projects/etosha_heights/eh_planet/evi/", pattern = glob2rx("*.tif"), full.names = T))
+eh.savi <- rast(list.files(path = "L:/projects/etosha_heights/eh_planet/savi/", pattern = glob2rx("*.tif"), full.names = T))
+eh.nirv <- rast(list.files(path = "L:/projects/etosha_heights/eh_planet/nirv/", pattern = glob2rx("*.tif"), full.names = T))
+eh.ndvi <- rast(list.files(path = "L:/projects/etosha_heights/eh_planet/ndvi/", pattern = glob2rx("*.tif"), full.names = T))
+
+# set layer names 
+names(eh.evi) <- c(substr(list.files(path = "L:/projects/etosha_heights/eh_planet/evi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.savi) <- c(substr(list.files(path = "L:/projects/etosha_heights/eh_planet/savi/",pattern = glob2rx("*.tif")),1,11))
+names(eh.nirv) <- c(substr(list.files(path = "L:/projects/etosha_heights/eh_planet/nirv/",pattern = glob2rx("*.tif")),1,11))
+names(eh.ndvi) <- c(substr(list.files(path = "L:/projects/etosha_heights/eh_planet/ndvi/",pattern = glob2rx("*.tif")),1,11))
+
+# not sure why this didn't carry through from the processing step...
+veg.p <- project(veg.p, eh.evi)
+
+# read them in for analyses on the go
+pel <- na.omit(read.csv("L:/projects/etosha_heights/eh_planet/eh_plot_evi.csv", header = T))
+psl <- na.omit(read.csv("L:/projects/etosha_heights/eh_planet/eh_plot_savi.csv", header = T))
+pnl <- na.omit(read.csv("L:/projects/etosha_heights/eh_planet/eh_plot_nirv.csv", header = T))
+pnd <- na.omit(read.csv("L:/projects/etosha_heights/eh_planet/eh_plot_ndvi.csv", header = T))
+
+# read coords for veg height data from 2024, omit unnecessary data and transform coordinates to match other layers
+ht.crd <- read.csv("L:/projects/etosha_heights/eh_veg_data/EH_canopy_height_coords_2024.csv", header = T)
+ht.crd <- vect(ht.crd, geom = c("lon.dd", "lat.dd"), crs = "+proj=longlat +datum=WGS84")[,1]
+ht.crd <- project(ht.crd, veg.p)
+
+# match plots by proximity
+crsrf <- as.data.frame(nearby(ht.crd, veg.p, k = 1))
+names(crsrf) <- c("Plot", "VMrec")
+crsrf$releve <- veg.p$Releve._n0[crsrf$VMrec]
+
+# read height data, summarise by plot, and join with releve info
+ht <- read.csv("L:/projects/etosha_heights/eh_veg_data/EH_canopy_height_2024.csv", header = T) %>%
+  group_by(Plot) %>%
+  summarise(ht = mean(Ht, na.rm = T),
+            ht.sd = sd(Ht, na.rm = T))
+
+# join height and cross ref data
+ht <- full_join(ht, crsrf)
+
+
+# join these dataframes
+plt.vi <- full_join(pel, psl)
+plt.vi <- full_join(plt.vi, pnl)
+plt.vi <- full_join(plt.vi, pnd) %>%
+  rename(releve = Releve._n0)
+
+#rm(pel,psl,plt.evi,plt.savi)
+
+plt.vi <- left_join(plt.vi, ht)
+
+# add time stamp here
+plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
+                             format = "%Y%m%d")
+
+# create a factor for veg community
+plt.vi$VegComm <- as.factor(plt.vi$Associati0)
+
+# create a factor for the larger groups
+plt.vi$vg <- case_when(
+  plt.vi$Associati0 %in% c(1:4) ~ "Mountain", 
+  plt.vi$Associati0 %in% c(5:7) ~ "Wetland", 
+  plt.vi$Associati0 > 7 ~ "Savanna Shrubland"
+)
+
+# aggregate by veg class
+vcl <- plt.vi %>%
+  group_by(VegComm,timestamp) %>%
+  summarise(evi = mean(evi, na.rm = T),
+            svi = mean(savi, na.rm = T),
+            nrv = mean(nirv, na.rm = T),
+            ndvi = mean(ndvi, na.rm = T),
+            elev_m = mean(elev_m, na.rm = T))
+
+# can only plot with POSIXct class
+vcl$ts <- as.POSIXct(vcl$timestamp)
+
+# aggregate by veg group
+vgr <- plt.vi %>%
+  group_by(vg,timestamp) %>%
+  summarise(evi = mean(evi, na.rm = T),
+            svi = mean(savi, na.rm = T),
+            nrv = mean(nirv, na.rm = T),
+            ndvi = mean(ndvi, na.rm = T),
+            elev_m = mean(elev_m, na.rm = T))
+
+# can only plot with POSIXct class
+vgr$ts <- as.POSIXct(vgr$timestamp)
+
+```
+
+
+
+```{r, echo = F}
+# plot-level SD
+tm.sd <- plt.vi %>%
+  group_by(timestamp) %>%
+  summarise(evi.sd = sd(evi, na.rm = T),
+            savi.sd = sd(savi, na.rm = T),
+            nirv.sd =sd(nirv, na.rm = T),
+            ndvi.sd =sd(ndvi, na.rm = T)) %>%
+  arrange(,desc(ndvi.sd))
+
+tm.sd$timestamp <- as.POSIXct(tm.sd$timestamp)
+
+knitr::kable(tm.sd, caption = "Standard Deviation")
+
+```
+
+
+```{r, echo = F}
+# study area SD from across the images
+eh.sd <- tm.sd
+  
+for (i in 1:nlyr(eh.nirv))
+{
+  eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
+  eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
+  eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
+  eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
+}
+```
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -67,32 +67,12 @@ veg.p$hab <- case_when(        # create variable for habitat type
   veg.p$assoc > 7 ~ 3)         # Savanna
 
 #------------------------------------------------------------------------------------#
-# extract reflectance/vi values and append veg classes
+# read in extracted vi values and append veg classes
 #------------------------------------------------------------------------------------#
-
-psr <- terra::extract(sr, veg.p, FUN = NULL) %>% #extract pixel values
-        full_join(psr,veg.p, copy = T) %>%       # join with the veg data for modeling
-        na.omit()
-
-p.evi <- terra::extract(eh.evi, veg.p, FUN = NULL) %>% #extract pixel values
-          full_join(veg.p, copy = T) %>%
-          na.omit()
-write.csv(p.evi, "eh_vi_extracts/eh_plot_evi.csv", row.names = F)
-  
-p.ndvi <- terra::extract(eh.ndvi, veg.p, FUN = NULL) %>% #extract pixel values
-  full_join(veg.p, copy = T) %>%
-  na.omit()
-write.csv(p.ndvi, "eh_vi_extracts/eh_plot_ndvi.csv", row.names = F)
-
-p.nir <- terra::extract(eh.nirv, veg.p, FUN = NULL) %>% #extract pixel values
-  full_join(veg.p, copy = T) %>%
-  na.omit()
-write.csv(p.nir, "eh_vi_extracts/eh_plot_nirv.csv", row.names = F)
-
-p.savi <- terra::extract(eh.savi, veg.p, FUN = NULL) %>% #extract pixel values
-  full_join(veg.p, copy = T) %>%
-  na.omit()
-write.csv(p.savi, "eh_vi_extracts/eh_plot_savi.csv", row.names = F)
+#p.evi <- read.csv("eh_vi_extracts/eh_plot_pix_evi.csv", header = T)
+p.ndvi <- read.csv("eh_vi_extracts/eh_plot_pix_ndvi.csv", header = T)
+#p.nir <- read.csv("eh_vi_extracts/eh_plot_pix_nirv.csv", header = T)
+#p.savi <- read.csv("eh_vi_extracts/eh_plot_pix_savi.csv", header = T)
 
 #------------------------------------------------------------------------------------#
 # RANDOM FOREST CLASSIFICATION
