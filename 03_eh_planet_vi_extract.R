@@ -151,125 +151,35 @@ write.csv(plt.vi,"eh_vi_extracts/eh_plot_mean_vi.csv", row.names = F)
 
 # study area SD from across the images
 eh.sd <- as.data.frame(names(eh.ndvi))
-eh.sd[,2:5] <- 1.0
-names(eh.sd) <- c("name", "ndvi", "evi", "savi", "nirv")
+eh.sd[,2:9] <- 1.0
+names(eh.sd) <- c("name", "ndvi","ndvi.sd", "evi","evi.sd", "savi","savi.sd", "nirv", "nirv.sd")
 
 
 for (i in 1:nlyr(eh.nirv))
 {
+  eh.sd$evi[i] <- mean(values(eh.evi[[i]]), na.rm = T)
+  eh.sd$savi[i] <- mean(values(eh.savi[[i]]), na.rm = T)
+  eh.sd$nirv[i] <- mean(values(eh.nirv[[i]]), na.rm = T)
+  eh.sd$ndvi[i] <- mean(values(eh.ndvi[[i]]), na.rm = T)
   eh.sd$evi.sd[i] <- sd(values(eh.evi[[i]]), na.rm = T)
   eh.sd$savi.sd[i] <- sd(values(eh.savi[[i]]), na.rm = T)
   eh.sd$nirv.sd[i] <- sd(values(eh.nirv[[i]]), na.rm = T)
   eh.sd$ndvi.sd[i] <- sd(values(eh.ndvi[[i]]), na.rm = T)
 }
 
-write.csv(eh.sd, "eh_vi_extracts/eh_site_vi_sd.csv", row.names = F)
+write.csv(eh.sd, "eh_vi_extracts/eh_site_vi.csv", row.names = F)
 #---------------------------------------------------------------------------------------------------------------------------------#
 # probably start new script here for data analysis
 #---------------------------------------------------------------------------------------------------------------------------------#
-# add time stamp here
-plt.vi$timestamp <- strptime(as.numeric(substr(plt.vi$name,4,11)), 
-                             format = "%Y%m%d")
+#---------------------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------------------------#
 
-# create a factor for veg community
-plt.vi$VegComm <- as.factor(plt.vi$assoc)
-
-# create a factor for the larger groups
-plt.vi$vg <- case_when(
-  plt.vi$Associati0 %in% c(1:4) ~ "Mountain", 
-  plt.vi$Associati0 %in% c(5:7) ~ "Wetland", 
-  plt.vi$Associati0 > 7 ~ "Savanna Shrubland"
-)
-
-#-----------------------------------------------------------------------------#
-# aggregate by veg class
-vcl <- plt.vi %>%
-  group_by(VegComm,timestamp) %>%
-  summarise(evi = mean(evi, na.rm = T),
-            svi = mean(savi, na.rm = T),
-            nrv = mean(nirv, na.rm = T),
-            ndvi = mean(ndvi, na.rm = T),
-            elev_m = mean(elev_m, na.rm = T))
-
-# can only plot with POSIXct class
-vcl$ts <- as.POSIXct(vcl$timestamp)
-
-# aggregate by veg group
-vgr <- plt.vi %>%
-  group_by(vg,timestamp) %>%
-  summarise(evi = mean(evi, na.rm = T),
-            svi = mean(savi, na.rm = T),
-            nrv = mean(nirv, na.rm = T),
-            ndvi = mean(ndvi, na.rm = T),
-            elev_m = mean(elev_m, na.rm = T))
-
-# can only plot with POSIXct class
-vgr$ts <- as.POSIXct(vgr$timestamp)
-
-# thinking about looking at changes in standard deviation through time
-# for both sample plots, and across the entire study area (each raster)
-
-# plot-level SD
-tm.sd <- plt.vi %>%
-  group_by(timestamp) %>%
-  summarise(evi.sd = sd(evi, na.rm = T),
-            savi.sd = sd(savi, na.rm = T),
-            nirv.sd =sd(nirv, na.rm = T),
-            ndvi.sd =sd(ndvi, na.rm = T))
-
-tm.sd$timestamp <- as.POSIXct(tm.sd$timestamp)
 
 
 
 #------------------------------------------------------------#
-#------------------- MET data--------------------------------#
-#------------------------------------------------------------#  
-  # read temp and precip data
-  prcp <- read.csv("eh_met_data/daily_precip.csv", header = T)
 
-eh.prcp <- prcp %>%
-  group_by(tmstmp) %>%
-  summarise(eh.precip = mean(precip.mm))
 
-eh.prcp$tmstmp <- as.POSIXct(strptime(eh.prcp$tmstmp,
-                                      format = "%Y-%m-%d"))
-
-ta <- read.csv("eh_met_data/daily_air_temp.csv", header = T)
-
-eh.ta <- ta %>%
-  group_by(tmstmp) %>%
-  summarise(airTemp = mean(airTemp, na.rm = T))
-
-eh.ta$tmstmp <- as.POSIXct(strptime(eh.ta$tmstmp,
-                                    format = "%Y-%m-%d"))
-
-#------------------------------------------------------------#
-#------------------- PLOTS ----------------------------------#
-#------------------------------------------------------------#
-#-------------------------------------------------------------
-# theme for the plots
-My_Theme = theme(
-  axis.title = element_text(size = 16),
-  axis.text = element_text(size = 14),
-  legend.text = element_text(size = 10),
-  legend.title = element_text(size = 10))
-
-#-------------------met variables------------------------#    
-# barplot of site precip
-p <- ggplot(data = eh.prcp,
-       aes(x = tmstmp, y = eh.precip)) +
-        geom_bar(stat = "identity", position = "dodge") +
-        xlim(c(min(vcl$ts), max(vcl$ts))) +
-        labs(y = "Precip (mm)",
-             x = NULL) +
-        My_Theme
-
-t <- ggplot(data = eh.ta, aes(x= tmstmp, y = airTemp)) +
-        geom_line() + 
-        xlim(c(min(vcl$ts), max(vcl$ts))) +
-        labs(y = "Air Temperature", 
-             x = NULL) + 
-        My_Theme
 #-------------------EVI------------------------#    
 # plot evi timeseries
 ea <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
