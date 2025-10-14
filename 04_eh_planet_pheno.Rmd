@@ -1,14 +1,18 @@
 ---
-title: "Etosha Heights Plot Vegetation Indices"
-output: html_document
-date: "2025-09-25"
+title: "Etosha Heights Vegetation Indices"
+output: word_document
+date: "2025-10-14"
 ---
 
 ```{r setup, include=FALSE, echo = F, message = F}
 knitr::opts_chunk$set(echo = TRUE)
 library(terra)
 library(tidyverse)
+library(patchwork)
+
 ```
+
+In order to explore the utility of seasonally variable productivity metrics for mapping savanna vegetation communities we begin by examining several vegetation indices across the Etosha Heights reserve study area for the 2023-24 wet season. The vegetation indices (VI) include Normalized Difference Vegetation Index (NDVI), Enhanced Vegetation Index (EVI), Soil Adjusted Vegetation Index (SAVI), and Near Infrared Reflectance of Vegetation (NIRV). Ostensibly the metric with the greatest amount of variability is best suited for differentiating between vegetation communities we will first examine whether there are differences in overall variability between the different vegetation indices.  
 
 ```{r, echo = F, message = F}
 # read in the stacks of vi data along with sample plot polygons
@@ -111,19 +115,42 @@ sm.vi <- plt.vi %>%
          group_by(timestamp) %>%
          summarise(evi.sd = sd(evi, na.rm = T),
                 savi.sd = sd(savi, na.rm = T),
-                nir.sd = sd(nir, na.rm = T),
+                nirv.sd = sd(nir, na.rm = T),
                 ndvi.sd =sd(ndvi, na.rm = T),
                 evi = mean(evi, na.rm = T),
                 savi = mean(savi, na.rm = T),
-                nir = mean(nir, na.rm = T),
+                nirv = mean(nir, na.rm = T),
                 ndvi = mean(ndvi, na.rm = T)) %>%
           mutate(ndvi.cv = ndvi.sd/ndvi,
                  evi.cv = evi.sd/evi,
                  savi.cv = savi.sd/savi,
-                 nir.cv = nir.sd/nir) %>%
+                 nirv.cv = nirv.sd/nirv) %>%
           na.omit
 
 sm.vi$timestamp <- as.POSIXct(sm.vi$timestamp)
+
+# make long data set for plotting
+sm.cv <- sm.vi %>%
+  select(timestamp, ends_with(".cv")) %>%
+  pivot_longer(cols = ends_with(".cv"),
+               names_to = "vi", values_to = "cv") %>%
+  mutate(vi = gsub(".cv","",vi))
+ 
+sm.sd <- sm.vi %>%
+  select(timestamp, ends_with(".sd")) %>%
+  pivot_longer(cols = ends_with(".sd"),
+               names_to = "vi", values_to = "sd") %>%
+  mutate(vi = gsub(".sd","",vi)) %>%
+  full_join(sm.cv)
+
+sm.vil <- sm.vi %>%
+  select(timestamp, !contains(".")) %>%
+  pivot_longer(cols = contains("v"),
+               names_to = "vi", values_to = "mean") %>%
+  full_join(sm.sd)
+
+rm(sm.cv, sm.sd)
+
 
 #knitr::kable(tm.sd, caption = "Standard Deviation")
 
@@ -196,52 +223,257 @@ cvp <- ggplot() +
 #  theme(legend.position = "none") + 
   My_Theme
 
-
+# plot coefficient of variation and precip on a single plot for all of EH
 cv.pr <- ggplot() + 
   geom_line(data = eh.vil, aes(x = timestamp, y = cv, color = vi)) +
   geom_point(data = eh.vil, aes(x = timestamp, y = cv, color = vi)) +
   geom_bar(data = eh.prcp,aes(x = tmstmp, y = eh.precip*0.009),
            stat = "identity", position = "dodge") +
   xlim(c(min(eh.vi$timestamp), max(eh.vi$timestamp))) +
-    labs(x = NULL, color = NULL) +
+    labs(x = NULL, color = NULL, title = "Etosha Heights") +
   scale_y_continuous(name = "CV",
                      sec.axis = sec_axis(transform = ~./0.009, name = "Precipitation (mm)")) +
   My_Theme +
-  theme(legend.position = c(0.2,0.9)) + 
+  theme(legend.position = c(0.2,0.8)) + 
   scale_color_discrete(labels = c("EVI", "NDVI", "NIRV", "SAVI")) +
   guides(color = guide_legend(nrow = 2)) 
   
- 
+# plot coefficient of variation and precip on a single plot for only sample plots
+scv.pr <- ggplot() + 
+  geom_line(data = sm.vil, aes(x = timestamp, y = cv, color = vi)) +
+  geom_point(data = sm.vil, aes(x = timestamp, y = cv, color = vi)) +
+  geom_bar(data = eh.prcp,aes(x = tmstmp, y = eh.precip*0.009),
+           stat = "identity", position = "dodge") +
+  xlim(c(min(sm.vi$timestamp), max(sm.vi$timestamp))) +
+    labs(x = NULL, color = NULL, title = "Sample Plots") +
+  scale_y_continuous(name = "CV",
+                     sec.axis = sec_axis(transform = ~./0.009, name = "Precipitation (mm)")) +
+  My_Theme +
+  theme(legend.position = c(0.2,0.8)) + 
+  scale_color_discrete(labels = c("EVI", "NDVI", "NIRV", "SAVI")) +
+  guides(color = guide_legend(nrow = 2)) 
+
+# plot seasonal vi timerseries for EH
 vi.pr <- ggplot() + 
   geom_line(data = eh.vil, aes(x = timestamp, y = mean, color = vi)) +
   geom_point(data = eh.vil, aes(x = timestamp, y = mean, color = vi)) +
   geom_bar(data = eh.prcp,aes(x = tmstmp, y = eh.precip*0.009),
            stat = "identity", position = "dodge") +
   xlim(c(min(eh.vi$timestamp), max(eh.vi$timestamp))) +
-    labs(x = NULL, color = NULL) +
+    labs(x = NULL, color = NULL, title = "Etosha Heights") +
   scale_y_continuous(name = "VI",
                      sec.axis = sec_axis(transform = ~./0.009, name = "Precipitation (mm)")) +
   My_Theme +
-  theme(legend.position = c(0.2,0.9)) + 
+  theme(legend.position = c(0.2,0.8)) + 
   scale_color_discrete(labels = c("EVI", "NDVI", "NIRV", "SAVI")) +
   guides(color = guide_legend(nrow = 2)) 
 
-#cv.pr  +vi.pr + theme(legend.position="none") +  plot_layout((ncol=1))
+# plot seasonal vi timerseries for smaple plots
+svi.pr <- ggplot() + 
+  geom_line(data = sm.vil, aes(x = timestamp, y = mean, color = vi)) +
+  geom_point(data = sm.vil, aes(x = timestamp, y = mean, color = vi)) +
+  geom_bar(data = eh.prcp,aes(x = tmstmp, y = eh.precip*0.009),
+           stat = "identity", position = "dodge") +
+  xlim(c(min(sm.vil$timestamp), max(sm.vil$timestamp))) +
+    labs(x = NULL, color = NULL, title = "Sample Plots") +
+  scale_y_continuous(name = "VI",
+                     sec.axis = sec_axis(transform = ~./0.009, name = "Precipitation (mm)")) +
+  My_Theme +
+  theme(legend.position = c(0.2,0.8)) + 
+  scale_color_discrete(labels = c("EVI", "NDVI", "NIRV", "SAVI")) +
+  guides(color = guide_legend(nrow = 2))
 
-
-cv.pr
+cv.pr + scv.pr+ theme(legend.position = "none") + plot_layout((ncol=1))
   
 ```
 
 
-Figure 1. Coefficient of variation for different vegetation indices across Etosha Heights Reserve for the 2023-2024 wet season. Gray bars indicate daily precipitation sums, and correspond to the scale on the right axis. 
+Figure 1. Mean coefficient of variation for each vegetation index across the 2023-2024 wet season. The top panel includes all pixels within the study area, and the bottom panels includes only those within vegetation sampling sites. Gray bars indicate daily precipitation sums, and correspond to the scale on the right axis. 
 
 
 
-```{r pressure, echo=FALSE, warning = F}
-vi.pr
+```{r, message = F, echo=FALSE, warning = F}
+vi.pr + svi.pr+ theme(legend.position = "none") + plot_layout((ncol=1))
 ```
 
 
-Figure 2. Seasonal timeseries of four vegetation indices across the Etosha Heights Reserve for the 2023-2024 wet season. Gray bars indicate daily precipitation sums, and correspond to the scale on the right axis. 
+Figure 2. Seasonal timeseries for each vegetation index across the 2023-2024 wet season. The top panel includes the mean all pixels within the study area, and the bottom panels includes only those within vegetation sampling sites. Gray bars indicate daily precipitation sums, and correspond to the scale on the right axis. 
 
+
+Given that NDVI exhibits the greatest variability within the Etosha Heights study area throughout the growing season (Figure 1), and also the greatest seasonal amplitude (Figure 2) it seems better suited than the alternative vegetation indices for mapping vegetation communities. Next we'll examine seasonal NDVI daynamics for the individual vegetation communties.  
+
+
+```{r, echo = F, message = F, warning = F}
+#-------------------NDVI------------------------#    
+# upper and lower y-acis limits
+yl <- 0.15
+yu <- 0.37
+
+da <- ggplot(data = vcl, aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# mountains only 
+dmt <- vcl %>%
+  filter(VegComm %in% c(1:4)) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +  
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# wetlands only 
+dw <- vcl %>%
+  filter(VegComm %in% c(5:7)) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# savanna only 
+ds <- vcl %>%
+  filter(as.numeric(VegComm) > 7) %>%
+  ggplot( aes(x = ts, y = ndvi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  ylim(yl,yu) +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# broad veg groups
+dg <- ggplot(data = vgr, aes(x = ts, y = ndvi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NDVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+#da + p +plot_layout((ncol=1))
+#ggsave("sawma_figures/ndvi_precip.png", width = 10, height = 8, units = "in")
+
+#d.sd + da + p +plot_layout((ncol=1))
+#ggsave("sawma_figures/ndvi_sd_precip.png", width = 10, height = 8, units = "in")
+
+#dmt + dw + ds + plot_layout((ncol=1))
+#ggsave("sawma_figures/ndvi_veg.png", width = 10, height = 8, units = "in")
+
+da
+
+
+```
+
+Figure 3. Seasonal time series of NDVI for each of the 13 individual vegetation communities. 
+
+
+
+```{r, message = F, echo=FALSE, warning = F}
+dg
+```
+
+Figure 4. Seasonal time series of NDVI for each of the three broad groupings of habitat type. 
+
+
+
+
+Below are seasonal timeseries plots of all four vegetation indices for comparison.Note that these too demonstrate that NDVI has a greater degree of variability, both in space and time, than the other indices. Aside from overall variability in coefficient of variation shown in Figure 1 this is mainly a rough visual assessment at this point.
+
+```{r, message = F, echo=FALSE, warning = F}
+#-------------------EVI------------------------#    
+# plot evi timeseries
+ea <- ggplot(data = vcl, aes(x = ts, y = evi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "EVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+# plot evi time series by veg group
+eg <- ggplot(data = vgr, aes(x = ts, y = evi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "EVI", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+#-------------------SAVI------------------------#    
+# plot savi time series by association
+sa <- ggplot(data = vcl, aes(x = ts, y = svi, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "SAVI", 
+       x = NULL) +
+  My_Theme +
+ # theme(legend.position = "top") +
+  scale_fill_discrete()
+
+# plot savi time series by veg group
+sg <- ggplot(data = vgr, aes(x = ts, y = svi, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "SAVI", 
+       x = NULL) +
+  My_Theme +
+  # theme(legend.position = "top") +
+  scale_fill_discrete()
+
+#-------------------NIRv------------------------#    
+na <- ggplot(data = vcl, aes(x = ts, y = nrv, color = VegComm, group = VegComm)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NIRv", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+ng <- ggplot(data = vgr, aes(x = ts, y = nrv, color = vg, group = vg)) +
+  geom_point() + 
+  geom_line() +
+  labs(color = "Vegetation \nCommunity", 
+       y = "NIRv", 
+       x = NULL) +
+  scale_fill_discrete() +
+  My_Theme
+
+
+da + theme(legend.position = "none") + ea + sa + theme(legend.position = "none") + na+ theme(legend.position = "none") + plot_layout(ncol=1)
+```
+
+
+Figure 5. Seasonal timeseries of each vegetation index for each vegetation community. Vegetation indices are noted on the y-axis. 
+
+
+
+
+```{r, message = F, echo=FALSE, warning = F}
+dg + theme(legend.position = "none") + eg + sg + theme(legend.position = "none") + ng+ theme(legend.position = "none") + plot_layout(ncol=1)
+
+```
+
+
+Figure 6. Seasonal VI timeseries for the three broad habitat groupings. 
