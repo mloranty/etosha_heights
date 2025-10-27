@@ -1,0 +1,69 @@
+---
+title: "Etosha Heights Random Forest Vegetation Summaries"
+format: html
+editor: visual
+---
+
+## Overview
+
+The following tables summarize a series of random forest models to predict vegetation communities across the Etosha Heights Private Reserve. The overarching idea is that seasonal timeseries of satellite observations are better suited to mapping fine-scale vegetation communities than a single image because the vegetation communities will respond differently to seasonal variation in precipitation and other environmental drivers. The following analyses utilize a stack of 25 Planet SuperDove images spanning the period from August 2023 to July 2024. Each image includes 8 spectral bands at 3 meter spatial resolution.
+
+```{r}
+#| include: false
+
+load("L:/projects/etosha_heights/rf1_results.RData")
+load("L:/projects/etosha_heights/rf3_results.RData")
+load("L:/projects/etosha_heights/rf5_results.RData")
+load("L:/projects/etosha_heights/rf6_results.RData")
+```
+
+## Predicting Vegetation Communities with NDVI
+
+To begin, we'll predict all 13 vegetation community classes using NDVI since that is the metric that captures the greatest degree of variability between the different vegetation communities across the growing season. The table below clearly indicates that prediction accuracy increases with the number of NDVI images. Using the full stack of 25 images yields approximately 75% accuracy (note the Kappa is a similar metric that takes into account the likelihood of achieving an accurate prediction due to chance).
+
+```{r}
+#| label: tbl-LABEL-1
+#| echo: false
+#| tbl-cap: Accuracy and Kappa statistics for Random Forest models predicted using varying numbers of NDVI images. n indicates the number of images used for predictions. Images were selected as evenly spaced sequences from the entire seasonal time series.
+
+knitr::kable(rf1_sum[,c(1,2,8)], row.names = F, align = "c")
+
+```
+
+## Predicting Vegetation Communities with Multispectral Images from a Single Date
+
+As a next step we can predict vegetation communities using individual 8-band multispectral images. We'll do this for each of the 25 images in the time series to see if a particular seasonal timing yields better predictions. As the table below demonstrates, accuracy ranges from 53% to 67%, and while the higher accuracy generally occurs early in the rainy season during green-up, there is not an extremely strong seasonal trend. We can also compare this to the NDVI results above in Table 1, and note that using 8 multispectral bands from a single date yields prediction accuracy similar to 9 NDVI images distributed across the study period. This suggest that the number of predictor variables might be more important that capturing seasonal variability, or more specifically, the 8 multispectral bands from a single date capture as much spatial heterogeneity as a similar number of single-band NDVI images distributed across the annual cycle.
+
+```{r}
+#| label: tbl-LABEL-2 
+#| echo: false 
+#| tbl-cap: Accuracy and Kappa statistics for Random Forest models predicted using individual multispectral images. file indicates the image date (yyyymmdd).
+
+knitr::kable(rf3_sum[,c(1,2,8)], row.names = F, align = "c")
+```
+
+## Predicting Vegetation Communities with Multispectral Images from Multiple Dates 
+
+To start we can predict land cover with an increasing number of multispectral images to examine how adding more data improves predictions. As the table below shows, accuracy increases as multiple images are used for prediction, however the magnitude of increase declines as successive images are added. For example going from one to two images increases accuracy by roughly 10%, whereas going from 5 to 6 predictor images (40 to 48 bands) only increases prediction accuracy by less than 1%. The overall accuracy of \~86% is quite good.
+
+```{r}
+#| label: tbl-LABEL-3 
+#| echo: false 
+#| tbl-cap: Accuracy and Kappa statistics for Random Forest models predicted using multiple multispectral images. n indicates the number of multispectral bands used for the prediction. Since each images has 8 bands, n/8 is equal to the number of images. For this analysis we use the top 6 images from Table 2 above in descending order (i.e. n = 8 used the most accurate image, n = 16 used the two most accurate images, etc...)
+
+knitr::kable(rf5_sum[,c(1,2,8)], row.names = F, align = "c")
+```
+
+As a lest step we can examine accuracy with 5 multispectral images that are randomly selected from our timeseries stack (as opposed to selecting the five best individual images). This will be a useful way of knowing whether we can simply use any five images, or if the timing somehow matters.
+
+```{r}
+#| label: tbl-LABEL-4 
+#| echo: false 
+#| tbl-cap: Accuracy and Kappa statistics for Random Forest models predicted using 5 multispectral images selected at Random. n indicates the number of multispectral bands used for the prediction. Since each images has 8 bands, n/8 is equal to the number of images. 
+
+knitr::kable(rf6_sum[,c(1,2,8)], row.names = F, align = "c")
+```
+
+## Summary
+
+Overall these results are quite good. Our highest accuracy values are typical to those observed for broad land cover classification tasks that often include classes that are much more distinct that the savanna vegetation communities that we're predicting here. The pragmatic utility of our analysis is that it provides some guidelines for managers and researchers wanting to make fine-scale habitat maps. The results indicate that with five random images you can make a vegetation community/habitat map that is quite good. This seems like a good hook for this paper in my view. I might do a bit more tinkering to see if precipitation timing impacts model accuracy for the individual images, but on the whole this seems like a good near-final endpoint.

@@ -99,13 +99,18 @@ for(i in 1:12)
   rf1_con[[i]] <- confusionMatrix(predict(rf_model,validD[,var]),as.factor(validD$assoc))
 }
 
-rf1_sum <- rfv_con[[1]]$overall
+rf1_sum <- rf1_con[[1]]$overall
 
-for(i in 2:length(rfv_con))
+for(i in 2:length(rf1_con))
 {
   rf1_sum <- rbind(rf1_sum,rf1_con[[i]]$overall )
 }
 
+rf1_sum <- as.data.frame(rf1_sum)
+
+rf1_sum$n <- sapply(rf1_mod,function(x){nrow(x$finalModel$importance)})
+
+save(rf1_mod, rf1_con, rf1_sum, file = "rf1_results.RData")
 #---------------------------------------------------------------------------------------------------------------------------------------#
 #------------------------ RF2 - fit a random forest model to best seasonal NDVI mosaics without atmos corr issues ----------------------#
 #---------------------------------------------------------------------------------------------------------------------------------------#
@@ -212,8 +217,12 @@ for(i in 2:length(rf3_con))
   rf3_sum <- rbind(rf3_sum,rf3_con[[i]]$overall )
 }
 
-rf_rf3_sum <- as.data.frame(rf3_sum)
-rf3_sum$file <- srf
+rf3_sum <- as.data.frame(rf3_sum)
+rf3_sum$file <- substr(list.files(path = "L:/projects/etosha_heights/eh_planet/sr_resample/", 
+                           pattern = glob2rx("EH*8b*sr*composite_resample.tif"), 
+                           recursive = T, 
+                           full.names = F),4,11)
+rf3_sum$n <- sapply(rf3_mod,function(x){nrow(x$finalModel$importance)})
 
 save(rf3_mod, rf3_con, rf3_sum, file = "rf3_results.RData")
 #-------------------------------------------------------------------------------------------------------------------------#
@@ -291,84 +300,26 @@ rf4_sum <- as.data.frame(rf4_sum)
 rf4_sum$file <- srf
 
 #-------------------------------------------------------------------------------------------------------------------#
-#------------------------ fit a random forest model multiple surface reflectance mosaics ---------------------------#
+#------------------------ RF5 vfit a random forest model to 6 best models (dates) from RF3  ------------------------#
 #-------------------------------------------------------------------------------------------------------------------#
 
-# read in the reflectance data
-#d <- rast(srf[c(5,9,13,24)])
+# need a vector of the models, sorted in descending order
+drec <- sort(rf3_sum$Accuracy, decreasing = T, index.return = T)$ix[1:6]
 
-# simplify band names
-names(d) <- c(paste("B", 1:8,".",1, sep = ""),
-              paste("B", 1:8,".",2, sep = ""),
-              paste("B", 1:8,".",3, sep = ""),
-              paste("B", 1:8,".",4, sep = ""))
+# create an empty list for rf model outputs
+rf5_mod <- list()
+rf5_con <- list()
 
-# extract pixel values
-sr <- terra::extract(d, veg.p, FUN = NULL)
-
-
-# join with other variables from veg.p
-psr2 <- full_join(sr, as.data.frame(veg.p)) %>%
-  na.omit()
-rm(sr)
-
-rec <- nrow(psr2)
-# specify training and validation data sets
-set.seed(11213)
-
-# randomly select half of the records
-sampleSamp <- sample(seq(1,rec),rec/2)
-
-psr2$sampleType <- "train"
-
-psr2$sampleType[sampleSamp] <- "valid"
-
-
-# create training and validation subsets
-trainD <- psr2[psr2$sampleType=="train",]
-validD<- psr2[psr2$sampleType=="valid",]
-
-#------------Random Forest Classification of reflectance data------------#
-# run the Random Forest model
-tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the training data
-                   number = 10, # number 10 fold
-                   repeats = 10) # number of repeats
-###random forests
-#Typically square root of number of variables
-rf.grid <- expand.grid(mtry=1:5) # number of variables available for splitting at each tree node
-
-rf4_model <- caret::train(x = trainD[,2:33], #digital number data
-                          y = as.factor(trainD$assoc), #land class we want to predict
-                          method = "rf", #use random forest
-                          metric="Accuracy", #assess by accuracy
-                          importance = TRUE, # calculate variable importance
-                          trControl = tc, #use parameter tuning method
-                          tuneGrid = rf.grid) #parameter tuning grid
-
-confusionMatrix(predict(rf2_model,validD[,2:17]),as.factor(validD$assoc))  
-confusionMatrix(predict(rf3_model,validD[,2:25]),as.factor(validD$assoc))
-confusionMatrix(predict(rf4_model,validD[,2:33]),as.factor(validD$assoc))
-
-#-------------------------------------------------------------------------------------------------------------------#
-#------------------------ fit a random forest model multiple surface reflectance mosaics ---------------------------#
-#-------------------------------------------------------------------------------------------------------------------#
-
-
-
-for(i in 1:10)
+# run models
+for(i in 1:length(drec))
 {
-  # read in a random sample of 4 bandsreflectance data
-  d <- rast(sample(srf,4))
+  # read in the reflectance data
+  d <- rast(srf[drec[1:i]])
   
-  # simplify band names
-  names(d) <- c(paste("B", 1:8,".",1, sep = ""),
-                paste("B", 1:8,".",2, sep = ""),
-                paste("B", 1:8,".",3, sep = ""),
-                paste("B", 1:8,".",4, sep = ""))
+  names(d) <- paste("B", 1:8,".",rep(1:i, each = 8), sep = "")
   
   # extract pixel values
   sr <- terra::extract(d, veg.p, FUN = NULL)
-  
   
   # join with other variables from veg.p
   psr <- full_join(sr, as.data.frame(veg.p)) %>%
@@ -376,6 +327,7 @@ for(i in 1:10)
   rm(sr)
   
   rec <- nrow(psr)
+  
   # specify training and validation data sets
   set.seed(11213)
   
@@ -386,10 +338,10 @@ for(i in 1:10)
   
   psr$sampleType[sampleSamp] <- "valid"
   
+  
   # create training and validation subsets
   trainD <- psr[psr$sampleType=="train",]
   validD<- psr[psr$sampleType=="valid",]
-  
   #------------Random Forest Classification of reflectance data------------#
   # run the Random Forest model
   tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the training data
@@ -397,37 +349,115 @@ for(i in 1:10)
                      repeats = 10) # number of repeats
   ###random forests
   #Typically square root of number of variables
-  rf.grid <- expand.grid(mtry=1:5) # number of variables available for splitting at each tree node
+  rf.grid <- expand.grid(mtry=1:round(sqrt(i*8))) # number of variables available for splitting at each tree node
   
-  rf_model <- caret::train(x = trainD[,2:33], #digital number data
+  rf_model <- caret::train(x = trainD[,2:(1+8*i)], #digital number data
                             y = as.factor(trainD$assoc), #land class we want to predict
                             method = "rf", #use random forest
                             metric="Accuracy", #assess by accuracy
                             importance = TRUE, # calculate variable importance
                             trControl = tc, #use parameter tuning method
                             tuneGrid = rf.grid) #parameter tuning grid
-  
-  rfx_mod[[i]] <- rf_model
-  rfx_con[[i]] <- confusionMatrix(predict(rf_model,validD[,2:33]),as.factor(validD$assoc))
-  
-  
+  rf5_mod[[i]] <- rf_model
+  rf5_con[[i]] <- confusionMatrix(predict(rf_model,validD[,2:(1+8*i)]),as.factor(validD$assoc))
 }
 
+rf5_sum <- rf5_con[[1]]$overall
 
+for(i in 2:length(rf5_con))
+{
+  rf5_sum <- rbind(rf5_sum,rf5_con[[i]]$overall )
+}
 
-
-
-
-
-
-
-
-
-confusionMatrix(predict(rf2_model,validD[,2:17]),as.factor(validD$assoc))  
-confusionMatrix(predict(rf3_model,validD[,2:25]),as.factor(validD$assoc))
-confusionMatrix(predict(rf4_model,validD[,2:33]),as.factor(validD$assoc))
-
+rf5_sum <- as.data.frame(rf5_sum)
+rf5_sum$n <- sapply(rf5_mod,function(x){nrow(x$finalModel$importance)})
+  
+save(rf5_mod, rf5_con, rf5_sum, file = "rf5_results.RData")
 #-------------------------------------------------------------------------------------------------------------------#
+#------------------------ RF6 fit a random forest model to 5 random dates from RF3  --------------------------------#
+#-------------------------------------------------------------------------------------------------------------------#
+
+# need a vector of the models, sorted in descending order
+#drec <- sort(rf3_sum$Accuracy, decreasing = T, index.return = T)$ix[1:6]
+
+# create an empty list for rf model outputs
+rf6_mod <- list()
+rf6_con <- list()
+
+# run models
+for(i in 1:5)
+{
+  # read in the reflectance data
+  d <- rast(sample(srf,5,replace = F))
+  
+  names(d) <- paste("B", 1:8,".",rep(1:5, each = 8), sep = "")
+  
+  # extract pixel values
+  sr <- terra::extract(d, veg.p, FUN = NULL)
+  
+  # join with other variables from veg.p
+  psr <- full_join(sr, as.data.frame(veg.p)) %>%
+    na.omit()
+  rm(sr)
+  
+  rec <- nrow(psr)
+  
+  # specify training and validation data sets
+  set.seed(11213)
+  
+  # randomly select half of the records
+  sampleSamp <- sample(seq(1,rec),rec/2)
+  
+  psr$sampleType <- "train"
+  
+  psr$sampleType[sampleSamp] <- "valid"
+  
+  
+  # create training and validation subsets
+  trainD <- psr[psr$sampleType=="train",]
+  validD<- psr[psr$sampleType=="valid",]
+  #------------Random Forest Classification of reflectance data------------#
+  # run the Random Forest model
+  tc <- trainControl(method = "repeatedcv", # repeated cross-validation of the training data
+                     number = 10, # number 10 fold
+                     repeats = 10) # number of repeats
+  ###random forests
+  #Typically square root of number of variables
+  rf.grid <- expand.grid(mtry=1:6) # number of variables available for splitting at each tree node
+  
+  rf_model <- caret::train(x = trainD[,2:41], #digital number data
+                           y = as.factor(trainD$assoc), #land class we want to predict
+                           method = "rf", #use random forest
+                           metric="Accuracy", #assess by accuracy
+                           importance = TRUE, # calculate variable importance
+                           trControl = tc, #use parameter tuning method
+                           tuneGrid = rf.grid) #parameter tuning grid
+  rf6_mod[[i]] <- rf_model
+  rf6_con[[i]] <- confusionMatrix(predict(rf_model,validD[,2:41]),as.factor(validD$assoc))
+}
+
+rf6_sum <- rf6_con[[1]]$overall
+
+for(i in 2:length(rf6_con))
+{
+  rf6_sum <- rbind(rf6_sum,rf6_con[[i]]$overall )
+}
+
+rf6_sum <- as.data.frame(rf6_sum)
+rf6_sum$n <- sapply(rf6_mod,function(x){nrow(x$finalModel$importance)})
+
+save(rf6_mod, rf6_con, rf6_sum, file = "rf6_results.RData")
+
+
+
+
+
+
+
+
+
+
+
 
 #-------------------------------------------------------------------------------------------------------------------#
 #------------------------ save the best model(s) and make predictions ----------------------------------------------#

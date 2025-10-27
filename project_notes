@@ -4,7 +4,8 @@ Metadata for Etosha Heights Planet data acquisition, processing, and analysis
 17 Oct 2025
 - fitting suites of RF models to predict veg communities
 - used analysis of seasonal variation VI to select NDVI as best metric
-- 
+- adding NDVI to individual surface reflectance mosiacs doesn't really improve model
+- including several surface reflectance mosaics (i.e. 2-4) is better than stack of ~25 NDVI files
 
 
 
