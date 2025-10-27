@@ -1,6 +1,6 @@
 ---
 title: "Etosha Heights Random Forest Vegetation Summaries"
-format: html
+format: docx
 editor: visual
 ---
 
@@ -42,7 +42,7 @@ As a next step we can predict vegetation communities using individual 8-band mul
 knitr::kable(rf3_sum[,c(1,2,8)], row.names = F, align = "c")
 ```
 
-## Predicting Vegetation Communities with Multispectral Images from Multiple Dates 
+## Predicting Vegetation Communities with Multispectral Images from Multiple Dates
 
 To start we can predict land cover with an increasing number of multispectral images to examine how adding more data improves predictions. As the table below shows, accuracy increases as multiple images are used for prediction, however the magnitude of increase declines as successive images are added. For example going from one to two images increases accuracy by roughly 10%, whereas going from 5 to 6 predictor images (40 to 48 bands) only increases prediction accuracy by less than 1%. The overall accuracy of \~86% is quite good.
 
