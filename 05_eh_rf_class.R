@@ -449,34 +449,29 @@ rf6_sum$n <- sapply(rf6_mod,function(x){nrow(x$finalModel$importance)})
 save(rf6_mod, rf6_con, rf6_sum, file = "rf6_results.RData")
 
 
-
-
-
-
-
-
-
-
-
-
 #-------------------------------------------------------------------------------------------------------------------#
 #------------------------ save the best model(s) and make predictions ----------------------------------------------#
 #-------------------------------------------------------------------------------------------------------------------#
 
-saveRDS(rf_model_cl, "eh_rf_models/ndvi_rf.rds")
+#saveRDS(rf_model_cl, "eh_rf_models/ndvi_rf.rds")
 
-mod_test <- readRDS("eh_rf_models/ndvi_rf_test.rds")
-# evaluate validation data
-confusionMatrix(predict(rf_model,validD[,lyr]),as.factor(validD$hab))
-confusionMatrix(predict(rf_model_cl,validD[,lyr]),as.factor(validD$assoc))
 
-# apply RF model to study site data
-sv <- eh.ndvi
-rf_prediction_cl <- predict(eh.ndvi[[-c(6,16)]], rf_model_cl, na.rm = T,
-                            filename = "eh_rf_predictions/eh_rf_hab_ndvi.tif",
+# apply RF5 model with 5 images to study site data
+d <- rast(srf[drec[1:5]])
+names(d) <- paste("B", 1:8,".",rep(1:5, each = 8), sep = "")
+
+rf5.5_prediction <- predict(d, rf5_mod[[5]], na.rm = T,
+                            filename = "eh_rf_predictions/eh_rf5_5.tif",
                             overwrite = T, progress = T)
 
 
+# apply RF5 model with 6 images to study site data
+d <- rast(srf[drec[1:6]])
+names(d) <- paste("B", 1:8,".",rep(1:6, each = 8), sep = "")
+
+rf5.6_prediction <- predict(d, rf5_mod[[6]], na.rm = T,
+                            filename = "eh_rf_predictions/eh_rf5_6.tif",
+                            overwrite = T, progress = T)
 #plot the data
 plot(rf_prediction_cl)
 
